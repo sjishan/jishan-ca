@@ -1,0 +1,12 @@
+{
+  "name": "jishan-ca",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "jishan.ca — homepage + weekly AI scrollytelling visuals. Static, zero-dependency build.",
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "node serve.mjs",
+    "dev": "node build.mjs && node serve.mjs"
+  }
+}

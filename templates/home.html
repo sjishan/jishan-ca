@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syed Tanveer Jishan - AI systems, taken apart and made to move</title>
+<meta name="description" content="Syed Tanveer Jishan, ML engineer turned AI product leader. Weekly visual teardowns of how AI systems and the products built on them actually behave, for people who ship, operate, and invest.">
+<link rel="canonical" href="https://jishan.ca/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Syed Tanveer Jishan - AI systems, taken apart and made to move">
+<meta property="og:description" content="Weekly visual teardowns of how AI systems behave. Each piece takes a hidden mechanism, makes it move, and lands a decision you can act on.">
+<meta property="og:url" content="https://jishan.ca/">
+<meta property="og:image" content="https://jishan.ca/assets/og-home.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --ink-soft:#2A2D24; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1;
+    --hair:#E9ECE3; --tint:rgba(12,106,82,.07);
+    --maxw:1120px;
+    --font:"IBM Plex Sans",Arial,sans-serif;
+    --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-variant-numeric:tabular-nums;}
+  a{color:var(--emerald-dark);text-decoration:none;}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+  .wrap{width:100%;max-width:var(--maxw);margin:0 auto;padding:0 36px;}
+
+  /* hero */
+  .hero{padding:clamp(54px,9vh,104px) 0 clamp(34px,5vh,56px);}
+  .hero h1{font-size:clamp(34px,6.4vw,68px);line-height:1.04;letter-spacing:-.025em;font-weight:700;margin:0 0 22px;max-width:16ch;text-wrap:balance;}
+  .hero h1 .lk{color:var(--foil);}
+  .hero .lede{font-size:clamp(18px,2vw,23px);line-height:1.5;color:var(--ink-soft);max-width:60ch;margin:0 0 32px;}
+  .cta{display:flex;flex-wrap:wrap;gap:13px;}
+  .b{font-family:var(--font);font-size:15.5px;font-weight:600;border-radius:999px;padding:12px 22px;cursor:pointer;transition:transform .12s ease,background .15s ease,border-color .15s ease;display:inline-flex;align-items:center;gap:8px;}
+  .b-fill{background:var(--emerald);color:#fff;border:1px solid var(--emerald);}
+  .b-fill:hover{background:var(--emerald-dark);border-color:var(--emerald-dark);}
+  .b-line{background:none;color:var(--emerald-dark);border:1px solid var(--grid);}
+  .b-line:hover{border-color:var(--emerald);}
+  .b .ar{transition:transform .15s ease;}
+  .b:hover .ar{transform:translateX(3px);}
+
+  /* section heading */
+  .shead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-top:1px solid var(--ink);padding-top:14px;margin-top:8px;}
+  .shead h2{font-size:clamp(20px,2.4vw,26px);line-height:1.1;letter-spacing:-.01em;font-weight:700;margin:0;}
+  .shead .count{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--slate);letter-spacing:.02em;white-space:nowrap;}
+
+  /* latest visuals: editorial hairline list */
+  .latest{padding:8px 0 clamp(26px,4vh,44px);}
+  .vlist{list-style:none;margin:18px 0 0;padding:0;}
+  .vrow{border-top:1px solid var(--hair);}
+  .vrow:last-child{border-bottom:1px solid var(--hair);}
+  .vrow a{display:grid;grid-template-columns:1fr auto;grid-template-areas:"title date" "dek date";gap:2px 28px;align-items:start;padding:22px 4px 22px 0;color:inherit;transition:padding-left .18s ease;}
+  .vrow a:hover{padding-left:10px;}
+  .vrow .t{grid-area:title;font-size:clamp(20px,2.3vw,27px);line-height:1.18;letter-spacing:-.015em;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:11px;}
+  .vrow a:hover .t{color:var(--emerald-dark);}
+  .vrow .t .ar{color:var(--emerald);opacity:0;transform:translateX(-6px);transition:opacity .18s ease,transform .18s ease;font-weight:400;}
+  .vrow a:hover .t .ar{opacity:1;transform:translateX(0);}
+  .vrow .dek{grid-area:dek;font-size:16px;line-height:1.45;color:var(--slate);max-width:64ch;margin-top:6px;}
+  .vrow .date{grid-area:date;font-family:var(--mono);font-size:13px;font-weight:500;color:var(--gray);white-space:nowrap;padding-top:7px;text-align:right;}
+  .viewall{display:block;text-align:right;margin-top:16px;font-size:14.5px;font-weight:600;color:var(--emerald-dark);}
+  .viewall:hover{color:var(--emerald);}
+
+  /* about */
+  .about{padding:clamp(18px,3vh,30px) 0 clamp(40px,7vh,72px);scroll-margin-top:74px;}
+  .about-grid{display:grid;grid-template-columns:170px 1fr;gap:clamp(28px,5vw,64px);align-items:start;margin-top:26px;}
+  .avatar{width:150px;height:150px;border-radius:50%;object-fit:cover;display:block;background:var(--tint);box-shadow:0 0 0 1px rgba(12,106,82,.22), 0 0 0 7px rgba(12,106,82,.05);}
+  /* monogram placeholder; replace this whole element with:
+     <img class="avatar" src="/assets/jishan.jpg" alt="Syed Tanveer Jishan"> */
+  .avatar.ph{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:40px;letter-spacing:.02em;color:var(--emerald);}
+  .about h2{font-size:clamp(22px,2.6vw,30px);line-height:1.12;letter-spacing:-.015em;font-weight:700;margin:0 0 16px;}
+  .about p{font-size:17.5px;line-height:1.62;color:var(--ink-soft);margin:0 0 16px;max-width:64ch;}
+  .stats{display:flex;flex-wrap:wrap;gap:14px 36px;margin:22px 0 18px;}
+  .stat .v{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1;letter-spacing:-.01em;color:var(--emerald);}
+  .stat .l{font-size:13px;line-height:1.35;color:var(--slate);margin-top:8px;max-width:22ch;}
+  .awards{font-size:15px;color:var(--slate);margin:0 0 18px;}
+  .awards b{color:var(--ink);font-weight:600;}
+  .alinks{display:flex;flex-wrap:wrap;gap:18px;font-size:15px;}
+  .alinks a{font-weight:600;color:var(--emerald-dark);border-bottom:1px solid rgba(12,106,82,.28);padding-bottom:1px;}
+  .alinks a:hover{border-bottom-color:var(--emerald);}
+
+  /* load motion */
+  .rise{opacity:0;transform:translateY(12px);animation:rise .6s cubic-bezier(.2,.7,.2,1) forwards;}
+  .rise.d1{animation-delay:.05s;} .rise.d2{animation-delay:.12s;} .rise.d3{animation-delay:.19s;}
+  @keyframes rise{to{opacity:1;transform:none;}}
+
+  @media (max-width:760px){
+    body{font-size:17px;}
+    .wrap{padding:0 22px;}
+    .about-grid{grid-template-columns:1fr;gap:24px;}
+    .avatar{width:104px;height:104px;}
+    .avatar.ph{font-size:28px;}
+    .vrow a{grid-template-columns:1fr;grid-template-areas:"title" "dek" "date";gap:6px;}
+    .vrow .date{text-align:left;padding-top:8px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .rise{animation:none;opacity:1;transform:none;}
+    .b,.vrow a,.vrow .t .ar,.b .ar{transition:none;}
+  }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <h1 class="rise d1">AI systems, taken apart and set <span class="lk">in motion</span></h1>
+      <p class="lede rise d2">Every week I take one hidden mechanism inside an AI system, or the product built on it, and make it move, so you can see how it behaves instead of just reading about it. I turn these insights into decisions so that you know what to build, ship, measure, or price to make your AI product successful.</p>
+      <div class="cta rise d3">
+        <a class="b b-fill" href="/visuals/">Browse the visuals <span class="ar">&rsaquo;</span></a>
+        <a class="b b-line" href="#about">About me</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="latest">
+    <div class="wrap">
+      <div class="shead">
+        <h2>Latest</h2>
+      </div>
+      <ul class="vlist"><!--VISUALS_LIST--></ul>
+      <a class="viewall" href="/visuals/">View all visuals &rsaquo;</a>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <div class="wrap">
+      <div class="shead"><h2>About</h2></div>
+      <div class="about-grid">
+        <img class="avatar" src="/assets/jishan.jpg" alt="Syed Tanveer Jishan">
+        <div>
+          <h2 style="border:0;padding:0;margin-top:0;">ML engineer turned AI product leader</h2>
+          <p>I am Syed Tanveer Jishan, a Bangladeshi-Canadian based in Vancouver and Chief Innovation Officer at MonetizeMore. I have 10 years+ of experience in machine learning and AI product development. I have built systems for ad fraud detection, agentic ad compliance, and both ML-based and agentic ad optimization. I have also worked with the data infrastructure underlying these systems. I have developed the ability to understand systems like an engineer while connecting them to business outcomes like a product strategist.</p>
+          <div class="stats">
+            <div class="stat"><div class="v">$2M+/yr</div><div class="l">ad spend protected by the ad fraud detection suite</div></div>
+            <div class="stat"><div class="v">2,418 hrs/mo</div><div class="l">manual review work automated</div></div>
+            <div class="stat"><div class="v">10+ yrs</div><div class="l">building ML and AI products</div></div>
+          </div>
+          <p class="awards"><b>Two Google Publishing Innovation Awards</b> (2020, 2022), for <a href="https://www.monetizemore.com/solutions/traffic-cop/" target="_blank" rel="noopener">Traffic Cop</a>'s impact on traffic quality and ad spend efficiency.</p>
+          <div class="alinks">
+            <a href="https://www.linkedin.com/in/sjishan" target="_blank" rel="noopener">LinkedIn</a>
+            <a href="mailto:syed@jishan.ca">Email</a>
+            <a href="https://github.com/sjishan" target="_blank" rel="noopener">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!--CHROME:FOOTER-->
+</body>
+</html>

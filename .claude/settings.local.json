@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node build.mjs)",
+      "Bash(echo \"grep exit: $?\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"dead-css exit: $?\")",
+      "Bash(echo \"leftover exit: $?\")",
+      "Bash(echo \"em-dash exit: $?\")",
+      "Bash(echo \"home exit: $?\")",
+      "Bash(npm run *)",
+      "Read(//home/syed/.config/Code/User/History/**)",
+      "Read(//home/syed/.local/share/Trash/files/**)",
+      "Read(//home/syed/**)"
+    ]
+  }
+}

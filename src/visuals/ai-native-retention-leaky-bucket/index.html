@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why AI products leak half their revenue in a year</title>
+<meta name="description" content="AI-native software keeps about 48% of revenue after a year versus 82% for traditional SaaS, and the gap tracks price. Retention benchmarks by price tier.">
+<link rel="canonical" href="https://jishan.ca/visuals/ai-native-retention-leaky-bucket">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why AI products leak half their revenue in a year">
+<meta property="og:description" content="AI-native software keeps about 48% of revenue after a year versus 82% for SaaS, and the gap comes down to price.">
+<meta property="og:url" content="https://jishan.ca/visuals/ai-native-retention-leaky-bucket">
+<meta property="og:image" content="https://jishan.ca/visuals/ai-native-retention-leaky-bucket/poster.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1;
+    --hair:#E9ECE3;
+    --stageW:600px;
+    --font:"IBM Plex Sans",Arial,sans-serif;
+    --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;display:flex;flex-direction:column;align-items:center;}
+  a{color:var(--emerald-dark);text-decoration:none;border-bottom:1px solid rgba(12,106,82,.28);}
+  a:hover{border-bottom-color:var(--emerald);}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+
+  /* The frame: a portrait stage the reader steps through on mobile, a landscape two-column frame on desktop */
+  .stage{
+    width:100%; max-width:var(--stageW); margin:0 auto; min-height:100svh;
+    padding:clamp(20px,3.2vh,34px) 24px;
+    display:flex; flex-direction:column; font-variant-numeric:tabular-nums;
+  }
+
+  .mast{flex:0 0 auto;}
+  .mast h1{font-size:clamp(28px,6vw,44px);line-height:1.07;letter-spacing:-.02em;font-weight:700;margin:0 0 12px;text-wrap:balance;}
+  .mast h1 .lk{color:var(--foil);}
+  .mast .standfirst{font-size:clamp(16px,2.4vw,20px);line-height:1.45;color:#2A2D24;margin:0;max-width:46ch;}
+  .mast .pubdates{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:11px 0 24px;font-size:13px;color:var(--slate);}
+  .mast .pubdates time{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .mast .pubdates .sep{color:var(--gray);}
+
+  /* viz + caption share the middle, with balanced vertical rhythm */
+  .frame{display:contents;}
+  .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;align-items:stretch;min-height:0;padding:8px 0;}
+  .viz{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;}
+  .figs{display:flex;gap:clamp(24px,6vw,48px);justify-content:center;align-items:flex-start;min-height:74px;transition:opacity .16s ease;}
+  .fig{display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .fig .v{font-family:var(--mono);font-size:clamp(33px,8vw,50px);font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .fig .l{font-size:13px;color:var(--slate);margin-top:7px;max-width:15ch;line-height:1.3;}
+  .chartwrap{width:100%;}
+  svg.chart{width:100%;height:auto;display:block;overflow:visible;}
+
+  .caps{position:relative;}
+  .cap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
+  .cap.is-on{opacity:1;pointer-events:auto;position:relative;}
+  .cap .idx{font-family:var(--mono);margin:0 0 10px;}
+  .cap .idx .n{font-size:19px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .cap .idx .t{font-size:16px;font-weight:600;color:var(--slate);}
+  .cap .txt{font-size:clamp(17px,2.5vw,20px);line-height:1.34;letter-spacing:-.005em;color:var(--ink);margin:0;}
+  .cap .txt b{font-weight:700;}
+  .cap .txt b.q{color:var(--emerald);}
+
+  /* navigation controls */
+  .nav{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;}
+  .btn{font-family:var(--font);font-size:15px;font-weight:600;color:var(--emerald-dark);background:none;border:1px solid var(--hair);border-radius:999px;padding:9px 17px;cursor:pointer;transition:border-color .15s ease;}
+  .btn:hover:not(:disabled){border-color:var(--emerald);}
+  .btn:disabled{opacity:.3;cursor:default;}
+  .dots{display:flex;gap:9px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--gray);border:none;padding:0;cursor:pointer;opacity:.45;transition:opacity .2s ease,transform .2s ease,background .2s ease;}
+  .dot.is-on{background:var(--emerald);opacity:1;transform:scale(1.18);}
+
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:10px;padding-top:13px;border-top:1px solid var(--hair);font-size:12px;color:var(--slate);}
+  .foot .src{max-width:64%;line-height:1.3;}
+  .foot .me{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--slate);border:none;}
+  .foot .me svg{width:14px;height:14px;display:block;fill:currentColor;}
+
+  /* sources for credibility + search, below the frame */
+  .sources-section{width:100%;max-width:var(--stageW);margin:0 auto;padding:32px 24px 64px;border-top:1px solid var(--hair);}
+  .sources-section h2{font-size:clamp(20px,3vw,25px);line-height:1.16;letter-spacing:-.01em;margin:0 0 8px;font-weight:700;}
+  .method-note{font-size:14px;line-height:1.6;color:var(--slate);margin:0 0 18px;}
+  .sources{font-size:15px;color:#31342A;list-style:none;padding:0;margin:0;}
+  .sources li{padding:11px 0;border-top:1px solid var(--hair);}
+  .sources li b{font-weight:600;}
+  .sources .meta{color:var(--slate);font-size:13.5px;}
+
+  @media (min-width:900px){
+    .stage{max-width:1120px;min-height:auto;display:block;padding:clamp(34px,5vh,58px) 36px;}
+    .mast h1{font-size:clamp(44px,5.2vw,60px);text-wrap:wrap;}
+    .mast .standfirst{font-size:clamp(19px,1.5vw,22px);max-width:none;}
+    .mast .pubdates{font-size:14px;margin-top:13px;}
+    .frame{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:18px;padding:30px 38px 24px;margin:16px 0 4px;}
+    .body{display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(34px,4vw,60px);align-items:center;padding:0;}
+    .viz{gap:12px;}
+    .cap .idx{margin-bottom:14px;}
+    .cap .idx .n{font-size:21px;} .cap .idx .t{font-size:17px;}
+    .cap .txt{font-size:clamp(19px,1.4vw,23px);line-height:1.46;}
+    .nav{justify-content:center;gap:clamp(20px,3vw,40px);border-top:1px solid var(--hair);margin-top:22px;padding-top:18px;}
+    .foot{margin-top:18px;}
+    .sources-section{max-width:1120px;padding:36px 36px 72px;}
+    .sources-section h2,.method-note,.sources{max-width:760px;}
+  }
+  @media (max-width:560px){
+    body{font-size:17px;}
+    .stage{padding:clamp(18px,2.6vh,26px) 18px;}
+    .figs{gap:20px;}
+    .sources-section{padding-left:18px;padding-right:18px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .figs,.cap,.dot{transition:none;}
+  }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+
+<main class="stage" id="stage" aria-label="Why AI products leak half their revenue in a year">
+
+  <header class="mast">
+    <h1>Why AI products <span class="lk">leak half</span> their revenue in a year</h1>
+    <p class="standfirst">AI-native software grows faster than the SaaS generation did and yet keeps far less of the revenue it earns. A year after sign-up it becomes visible that what separates the two is the price strategy.</p>
+    <p class="pubdates"><span>Published <time datetime="2026-06-11">June 11, 2026</time></span><span class="sep">&middot;</span><span>Updated <time datetime="2026-06-28">June 28, 2026</time></span></p>
+  </header>
+
+  <div class="frame">
+  <div class="body">
+    <section class="viz">
+      <div class="figs" id="figs"></div>
+      <div class="chartwrap">
+        <svg class="chart" id="chart" viewBox="0 0 760 430" role="img" aria-label="Cohort revenue retention curves over twelve months. AI-native median ends near 48 percent. Split by price, tools under fifty dollars a month retain about 32 percent, fifty to two hundred fifty dollars retain 61 percent, and above two hundred fifty dollars retain 85 percent. Traditional SaaS median is 82 percent.">
+          <g id="dyn"></g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="caps" id="caps" aria-live="polite">
+      <article class="cap" data-i="0">
+        <p class="idx"><span class="n">01</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>A year after sign-up, the typical AI product still collects just 48 cents of every dollar its customers used to pay.</b> That is what net revenue retention measures, how much of a group's spending one year still comes in the next, after upgrades, downgrades, and cancellations. A normal software company holds 82 cents, and a better AI model does not close the gap.</p>
+      </article>
+      <article class="cap" data-i="1">
+        <p class="idx"><span class="n">02</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>Much of that early drop is tourists.</b> They sign up to see what the fuss is about and then leave. It is better to start counting from month 3 after the curious ones are gone and it becomes apparent that the customers who stay are stickier. Across AI products the kept share rose from 27% to 40% over 2025. This is exactly what you would expect as the tourists clear out.</p>
+      </article>
+      <article class="cap" data-i="2">
+        <p class="idx"><span class="n">03</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>If you group those same companies by what they charge each month then the one curve splits into three.</b> What you will notice is the tools under $50 a month keep about 32% of their revenue after a year. The $50 to $250 range holds near 61%. However, products above $250 keep 85%. Same technology is in all three but what changes is who is buying.</p>
+      </article>
+      <article class="cap" data-i="3">
+        <p class="idx"><span class="n">04</span><span class="t"> / 04</span></p>
+        <p class="txt"><b class="q">So, what is the key takeaway?</b> The products stuck near 32% are cheap and single-purpose, the kind a team can drop without noticing. The ones reaching the 85% tier are becoming part of how that team works. So the right move is to price above $250 a month and build something that is worth sticking to.</p>
+      </article>
+    </section>
+  </div>
+
+  <nav class="nav" aria-label="Scene navigation">
+    <button class="btn prev" id="prev" type="button" aria-label="Previous scene">‹ Prev</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn next" id="next" type="button" aria-label="Next scene">Next ›</button>
+  </nav>
+  </div>
+
+  <footer class="foot">
+    <span class="src">ChartMogul SaaS Retention Report &middot; a16z, Retention Is All You Need &middot; 2025</span>
+    <a class="me" href="https://www.linkedin.com/in/sjishan" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"></path></svg>
+      <span>linkedin.com/in/sjishan</span>
+    </a>
+  </footer>
+
+</main>
+
+<!--SUBSCRIBE-->
+<section class="sources-section" aria-label="Sources">
+  <h2>Sources</h2>
+  <p class="method-note">Figures are 12-month medians as reported. The endpoints and the steep early drop come from the cited research; the month-by-month shape of the curves is drawn to read clearly. Tier values are reported as price-band medians.</p>
+  <ul class="sources">
+    <li><b>ChartMogul, The SaaS Retention Report: The AI churn wave</b> (Kyle Poyar, 2025). <span class="meta">AI-native median NRR &asymp;48%, GRR &asymp;40%; B2B SaaS median NRR &asymp;82%; retention by price tier; GRR 27% to 40% over 2025.</span> <a href="https://chartmogul.com/reports/saas-retention-the-ai-churn-wave/" target="_blank" rel="noopener">chartmogul.com</a></li>
+    <li><b>Andreessen Horowitz, Retention Is All You Need</b> (2025). <span class="meta">The AI tourist effect and the Month 0 to Month 3 rebase; acquisition, retention, and expansion phases of the AI retention curve.</span> <a href="https://a16z.com/ai-retention-benchmarks/" target="_blank" rel="noopener">a16z.com</a></li>
+    <li><b>Software Equity Group, public SaaS multiples</b> (2025). <span class="meta">NRR above 120% associated with &asymp;9.3x EV/revenue versus &asymp;3.1x below 100%.</span></li>
+  </ul>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var C = {emerald:[12,106,82], emeraldDark:[8,73,58], foil:[140,34,64], ink:[24,26,21], slate:[106,111,100], grid:[227,230,223], gray:[167,171,161]};
+  function rgb(a){return "rgb("+Math.round(a[0])+","+Math.round(a[1])+","+Math.round(a[2])+")";}
+
+  // ----- geometry -----
+  var VBW=760, VBH=430, PADL=60, PADR=96, PADT=26, PADB=52;
+  var pxL=PADL, pxR=VBW-PADR, pyT=PADT, pyB=VBH-PADB;
+  var PW=pxR-pxL, PH=pyB-pyT;
+  function X(m){return pxL+(m/12)*PW;}
+  function Y(v){return pyB-(v/100)*PH;}
+  var K=0.55;
+  function ret(E,m){return E+(100-E)*Math.exp(-K*m);}
+  function pathFor(E){ var d="",m; for(m=0;m<=12.0001;m+=0.25){ d+=(m===0?"M":"L")+X(m).toFixed(2)+","+Y(ret(E,m)).toFixed(2)+" "; } return d.trim(); }
+  function el(tag,attrs){ var e=document.createElementNS(SVGNS,tag),k; for(k in attrs){ if(attrs.hasOwnProperty(k)) e.setAttribute(k,attrs[k]); } return e; }
+
+  var dyn = document.getElementById('dyn');
+  if(!dyn) return;
+
+  // ----- static scaffold (grid + axes) -----
+  var i, gy=[0,50,100], gridG=el('g',{});
+  for(i=0;i<gy.length;i++){
+    gridG.appendChild(el('line',{x1:pxL,y1:Y(gy[i]),x2:pxR,y2:Y(gy[i]),stroke:rgb(C.grid),"stroke-width":1}));
+    var t=el('text',{x:pxL-9,y:Y(gy[i])+4,fill:"#2A2D24","font-size":16,"text-anchor":"end","font-family":"'IBM Plex Mono',monospace"}); t.textContent=gy[i]+"%"; gridG.appendChild(t);
+  }
+  var xm=[0,6,12];
+  for(i=0;i<xm.length;i++){ var xt=el('text',{x:X(xm[i]),y:pyB+24,fill:"#2A2D24","font-size":16,"text-anchor":"middle","font-family":"'IBM Plex Mono',monospace"}); xt.textContent="M"+xm[i]; gridG.appendChild(xt); }
+  gridG.appendChild(el('line',{x1:pxL,y1:Y(0),x2:pxR,y2:Y(0),stroke:"#C4C9BB","stroke-width":1.5}));
+  gridG.appendChild(el('line',{x1:pxL,y1:pyT,x2:pxL,y2:Y(0),stroke:"#C4C9BB","stroke-width":1.5}));
+  var ylab=el('text',{x:pxL,y:pyT-10,fill:rgb(C.slate),"font-size":15,"font-weight":600,"text-anchor":"start","font-family":"'IBM Plex Sans',Arial,sans-serif"}); ylab.textContent="revenue kept"; gridG.appendChild(ylab);
+  var xlab=el('text',{x:pxR,y:pyB+42,fill:rgb(C.slate),"font-size":15,"font-weight":600,"text-anchor":"end","font-family":"'IBM Plex Sans',Arial,sans-serif"}); xlab.textContent="months after signup"; gridG.appendChild(xlab);
+  dyn.appendChild(gridG);
+
+  // leak area
+  function areaAbove(E){ var d="M"+X(0).toFixed(2)+","+Y(100).toFixed(2)+" L"+X(12).toFixed(2)+","+Y(100).toFixed(2)+" ",m; for(m=12;m>=0;m-=0.25){ d+="L"+X(m).toFixed(2)+","+Y(ret(E,m)).toFixed(2)+" "; } return d+"Z"; }
+  var area = el('path',{d:areaAbove(48),fill:rgb(C.foil),stroke:"none",opacity:0}); dyn.appendChild(area);
+  var areaLabel = el('text',{x:X(3.4),y:Y(73),fill:rgb(C.foil),"font-size":16,"font-weight":600,"font-family":"inherit",stroke:"#FFFFFF","stroke-width":4,"paint-order":"stroke","stroke-linejoin":"round",opacity:0}); areaLabel.textContent="Revenue that leaks away"; dyn.appendChild(areaLabel);
+  var m3line = el('line',{x1:X(3),y1:pyT,x2:X(3),y2:pyB,stroke:rgb(C.foil),"stroke-width":1.2,"stroke-dasharray":"4 4",opacity:0}); dyn.appendChild(m3line);
+  var regionLabel = el('text',{x:X(3)+8,y:pyT+18,fill:rgb(C.foil),"font-size":16,"font-weight":600,"font-family":"inherit",stroke:"#FFFFFF","stroke-width":4,"paint-order":"stroke","stroke-linejoin":"round",opacity:0}); regionLabel.textContent="Tourists leave \u00b7 M3"; dyn.appendChild(regionLabel);
+
+  // SaaS baseline
+  var baseline = el('path',{d:"M"+X(0)+","+Y(95)+" L"+X(12)+","+Y(82),fill:"none",stroke:rgb(C.slate),"stroke-width":1.6,"stroke-dasharray":"5 5",opacity:0}); dyn.appendChild(baseline);
+  var baseLabel = el('text',{x:X(12)+8,y:Y(82)+8,fill:rgb(C.slate),"font-size":16,"font-weight":600,"font-family":"inherit",stroke:"#FFFFFF","stroke-width":4,"paint-order":"stroke","stroke-linejoin":"round",opacity:0}); baseLabel.textContent="SaaS 82%"; dyn.appendChild(baseLabel);
+
+  // median
+  var median = el('path',{d:pathFor(48),fill:"none",stroke:rgb(C.ink),"stroke-width":4,"stroke-linecap":"round",opacity:0}); dyn.appendChild(median);
+  var medianLen=1; try{ medianLen=median.getTotalLength(); }catch(e){ medianLen=900; }
+  median.setAttribute("stroke-dasharray", medianLen); median.setAttribute("stroke-dashoffset", medianLen);
+
+  // tiers
+  var tierDefs=[{id:'low',target:32,color:C.foil},{id:'mid',target:61,color:C.gray},{id:'top',target:85,color:C.emerald}];
+  var tiers=[];
+  for(i=0;i<tierDefs.length;i++){
+    var td=tierDefs[i];
+    var p=el('path',{d:pathFor(48),fill:"none",stroke:rgb(C.ink),"stroke-width":4,"stroke-linecap":"round",opacity:0}); dyn.appendChild(p);
+    var lab=el('text',{x:X(12)+8,y:Y(48),fill:rgb(td.color),"font-size":16,"font-weight":700,"font-family":"'IBM Plex Mono',monospace",stroke:"#FFFFFF","stroke-width":4,"paint-order":"stroke","stroke-linejoin":"round",opacity:0}); lab.textContent=td.target+"%"; dyn.appendChild(lab);
+    tiers.push({def:td,path:p,label:lab,e:48,v:0,op:0,opT:0,col:C.ink.slice(),colT:C.ink.slice(),eT:48});
+  }
+
+  // ----- chart state -----
+  var st={ medP:0,medPT:0,medOp:0,medOpT:0, areaOp:0,areaOpT:0,leakLabOp:0,leakLabOpT:0,markOp:0,markOpT:0, baseOp:0,baseOpT:0 };
+  var current=-1, sceneT0=0, staggerOn=false;
+  function approach(cur,tar,rate,dt){ return cur+(tar-cur)*Math.min(1,rate*dt); }
+  function snap(){ st.medP=st.medPT;st.medOp=st.medOpT;st.areaOp=st.areaOpT;st.leakLabOp=st.leakLabOpT;st.markOp=st.markOpT;st.baseOp=st.baseOpT; for(var t=0;t<tiers.length;t++){var T=tiers[t];T.e=T.eT;T.v=0;T.op=T.opT;T.col=T.colT.slice();} }
+  function setChart(s){
+    if(s===current) return;
+    var prev=current; current=s;
+    st.medPT=1; st.medOpT=(s<=2)?1:(s>=5?0:0.14);
+    st.areaOpT=(s===1||s===2)?0.09:0; st.leakLabOpT=(s===1)?1:0; st.markOpT=(s===2)?1:0;
+    st.baseOpT=(s>=4)?1:0;
+    for(var t=0;t<tiers.length;t++){ var T=tiers[t];
+      if(s>=3){ T.eT=T.def.target; T.colT=T.def.color.slice(); T.opT=(s===5 && T.def.id==='mid')?0.18:1; }
+      else { T.eT=48; T.colT=C.ink.slice(); T.opT=0; }
+    }
+    staggerOn=(prev<3 && s>=3); if(staggerOn) sceneT0=(window.performance?performance.now():Date.now());
+    if(reduce){ snap(); applyChart(); }
+  }
+  function applyChart(){
+    median.setAttribute("stroke-dashoffset", medianLen*(1-st.medP)); median.setAttribute("opacity", st.medOp.toFixed(3));
+    for(var t=0;t<tiers.length;t++){ var T=tiers[t]; T.path.setAttribute("d",pathFor(T.e)); T.path.setAttribute("stroke",rgb(T.col)); T.path.setAttribute("opacity",T.op.toFixed(3)); var yend=Y(ret(T.e,12)); T.label.setAttribute("y",(yend+4).toFixed(1)); T.label.setAttribute("fill",rgb(T.col)); T.label.setAttribute("opacity",T.op.toFixed(3)); }
+    area.setAttribute("opacity",st.areaOp.toFixed(3)); areaLabel.setAttribute("opacity",st.leakLabOp.toFixed(3));
+    m3line.setAttribute("opacity",st.markOp.toFixed(3)); regionLabel.setAttribute("opacity",st.markOp.toFixed(3));
+    baseline.setAttribute("opacity",st.baseOp.toFixed(3)); baseLabel.setAttribute("opacity",st.baseOp.toFixed(3));
+  }
+  var lastT=0;
+  function frame(now){
+    if(!lastT) lastT=now; var dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    st.medP=approach(st.medP,st.medPT,7,dt); st.medOp=approach(st.medOp,st.medOpT,8,dt);
+    st.areaOp=approach(st.areaOp,st.areaOpT,7,dt); st.leakLabOp=approach(st.leakLabOp,st.leakLabOpT,8,dt);
+    st.markOp=approach(st.markOp,st.markOpT,8,dt); st.baseOp=approach(st.baseOp,st.baseOpT,7,dt);
+    var sp=170, zeta=0.82, c=2*Math.sqrt(sp)*zeta, elapsed=now-sceneT0, STAG=130;
+    for(var t=0;t<tiers.length;t++){ var T=tiers[t];
+      var released=!staggerOn||(elapsed>=t*STAG); var eTgt=released?T.eT:48, opTgt=released?T.opT:0;
+      var cR=released?T.colT[0]:17, cG=released?T.colT[1]:17, cB=released?T.colT[2]:17;
+      var f=(-sp*(T.e-eTgt))-(c*T.v); T.v+=f*dt; T.e+=T.v*dt;
+      T.op=approach(T.op,opTgt,8,dt); T.col[0]=approach(T.col[0],cR,8,dt); T.col[1]=approach(T.col[1],cG,8,dt); T.col[2]=approach(T.col[2],cB,8,dt);
+    }
+    applyChart(); requestAnimationFrame(frame);
+  }
+
+  // ----- scenes (chart state + the figures shown above the chart) -----
+  var scenes=[
+    { chart:0, figs:[{v:"48%",l:"AI-native median",c:C.foil},{v:"82%",l:"SaaS median",c:C.gray}] },
+    { chart:2, figs:[{v:"27%",l:"early 2025",c:C.gray},{v:"40%",l:"by September",c:C.emeraldDark}] },
+    { chart:3, figs:[{v:"85%",l:"\u003e$250/mo",c:C.emerald},{v:"61%",l:"$50\u2013250",c:C.gray},{v:"32%",l:"\u003c$50/mo",c:C.foil}] },
+    { chart:5, figs:[{v:"85%",l:"embedded & priced",c:C.emerald},{v:"32%",l:"cheap & substitutable",c:C.foil}] }
+  ];
+  var N=scenes.length;
+  var figsEl=document.getElementById('figs'), dotsEl=document.getElementById('dots');
+  var prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+  var caps=[].slice.call(document.querySelectorAll('.cap'));
+  var stageEl=document.getElementById('stage');
+
+  function figsHTML(i){ var f=scenes[i].figs, o=""; for(var j=0;j<f.length;j++){ o+='<div class="fig"><span class="v" style="color:'+rgb(f[j].c)+'">'+f[j].v+'</span><span class="l">'+f[j].l+'</span></div>'; } return o; }
+
+  // build the dots
+  var dots=[];
+  for(i=0;i<N;i++){ (function(k){ var b=document.createElement('button'); b.type='button'; b.className='dot'; b.setAttribute('aria-label','Go to scene '+(k+1)); b.addEventListener('click',function(){ show(k); }); dotsEl.appendChild(b); dots.push(b); })(i); }
+
+  var idx=0, swapT=null;
+  function show(i){
+    i=Math.max(0,Math.min(N-1,i)); idx=i;
+    setChart(scenes[idx].chart);
+    for(var k=0;k<dots.length;k++){ dots[k].classList.toggle('is-on',k===idx); }
+    prevBtn.disabled=(idx===0); nextBtn.disabled=(idx===N-1);
+    if(reduce){
+      figsEl.innerHTML=figsHTML(idx);
+      for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+    } else {
+      figsEl.style.opacity=0;
+      if(swapT) clearTimeout(swapT);
+      swapT=setTimeout(function(){
+        figsEl.innerHTML=figsHTML(idx); figsEl.style.opacity=1;
+        for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+      },160);
+    }
+  }
+
+  prevBtn.addEventListener('click',function(){ show(idx-1); });
+  nextBtn.addEventListener('click',function(){ show(idx+1); });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'){ show(idx+1); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ show(idx-1); }
+  });
+  var x0=null;
+  stageEl.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+  stageEl.addEventListener('touchend',function(e){ if(x0===null) return; var dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40){ show(dx<0?idx+1:idx-1); } x0=null; },{passive:true});
+
+  // ----- init -----
+  if(reduce){ snap(); applyChart(); } else { requestAnimationFrame(frame); }
+  figsEl.innerHTML=figsHTML(0);
+  caps[0].classList.add('is-on');
+  dots[0].classList.add('is-on');
+  setChart(scenes[0].chart);
+  prevBtn.disabled=true; nextBtn.disabled=(N<=1);
+})();
+</script>
+<!--CHROME:FOOTER-->
+</body>
+</html>

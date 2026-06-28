@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why AI models top the benchmark and fail the job</title>
+<meta name="description" content="An agent that clears 95% of steps finishes a 20-step job only 36% of the time. Why benchmark scores collapse on longer real work, and where to add checks.">
+<link rel="canonical" href="https://jishan.ca/visuals/benchmark-vs-real-tasks">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why AI models top the benchmark and fail the job">
+<meta property="og:description" content="Reliability compounds: 95% per step is only 36% over 20 steps. Why benchmark scores collapse on real work.">
+<meta property="og:url" content="https://jishan.ca/visuals/benchmark-vs-real-tasks">
+<meta property="og:image" content="https://jishan.ca/visuals/benchmark-vs-real-tasks/poster.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1;
+    --hair:#E9ECE3;
+    --stageW:600px;
+    --font:"IBM Plex Sans",Arial,sans-serif;
+    --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;display:flex;flex-direction:column;align-items:center;}
+  a{color:var(--emerald-dark);text-decoration:none;border-bottom:1px solid rgba(12,106,82,.28);}
+  a:hover{border-bottom-color:var(--emerald);}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+
+  /* The frame: a portrait stage the reader steps through on mobile, a landscape two-column frame on desktop */
+  .stage{
+    width:100%; max-width:var(--stageW); margin:0 auto; min-height:100svh;
+    padding:clamp(20px,3.2vh,34px) 24px;
+    display:flex; flex-direction:column; font-variant-numeric:tabular-nums;
+  }
+
+  .mast{flex:0 0 auto;}
+  .mast h1{font-size:clamp(28px,6vw,44px);line-height:1.07;letter-spacing:-.02em;font-weight:700;margin:0 0 12px;text-wrap:balance;}
+  .mast h1 .lk{color:var(--foil);}
+  .mast .standfirst{font-size:clamp(16px,2.4vw,20px);line-height:1.45;color:#2A2D24;margin:0;max-width:46ch;}
+  .mast .pubdates{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:11px 0 24px;font-size:13px;color:var(--slate);}
+  .mast .pubdates time{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .mast .pubdates .sep{color:var(--gray);}
+
+  /* viz + caption share the middle, with balanced vertical rhythm */
+  .frame{display:contents;}
+  .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;align-items:stretch;min-height:0;padding:8px 0;}
+  .viz{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;}
+  .figs{display:flex;gap:clamp(24px,6vw,48px);justify-content:center;align-items:flex-start;min-height:74px;transition:opacity .16s ease;}
+  .fig{display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .fig .v{font-family:var(--mono);font-size:clamp(33px,8vw,50px);font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .fig .l{font-size:13px;color:var(--slate);margin-top:7px;max-width:15ch;line-height:1.3;}
+  .chartwrap{width:100%;}
+  canvas.chart{width:100%;height:auto;display:block;}
+
+  .caps{position:relative;}
+  .cap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
+  .cap.is-on{opacity:1;pointer-events:auto;position:relative;}
+  .cap .idx{font-family:var(--mono);margin:0 0 10px;}
+  .cap .idx .n{font-size:19px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .cap .idx .t{font-size:16px;font-weight:600;color:var(--slate);}
+  .cap .txt{font-size:clamp(17px,2.5vw,20px);line-height:1.34;letter-spacing:-.005em;color:var(--ink);margin:0;}
+  .cap .txt b{font-weight:700;}
+  .cap .txt b.q{color:var(--emerald);}
+
+  /* navigation controls */
+  .nav{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;}
+  .btn{font-family:var(--font);font-size:15px;font-weight:600;color:var(--emerald-dark);background:none;border:1px solid var(--hair);border-radius:999px;padding:9px 17px;cursor:pointer;transition:border-color .15s ease;}
+  .btn:hover:not(:disabled){border-color:var(--emerald);}
+  .btn:disabled{opacity:.3;cursor:default;}
+  .dots{display:flex;gap:9px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--gray);border:none;padding:0;cursor:pointer;opacity:.45;transition:opacity .2s ease,transform .2s ease,background .2s ease;}
+  .dot.is-on{background:var(--emerald);opacity:1;transform:scale(1.18);}
+
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:10px;padding-top:13px;border-top:1px solid var(--hair);font-size:12px;color:var(--slate);}
+  .foot .src{max-width:64%;line-height:1.3;}
+  .foot .me{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--slate);border:none;}
+  .foot .me svg{width:14px;height:14px;display:block;fill:currentColor;}
+
+  /* sources for credibility + search, below the frame */
+  .sources-section{width:100%;max-width:var(--stageW);margin:0 auto;padding:32px 24px 64px;border-top:1px solid var(--hair);}
+  .sources-section h2{font-size:clamp(20px,3vw,25px);line-height:1.16;letter-spacing:-.01em;margin:0 0 8px;font-weight:700;}
+  .method-note{font-size:14px;line-height:1.6;color:var(--slate);margin:0 0 18px;}
+  .sources{font-size:15px;color:#31342A;list-style:none;padding:0;margin:0;}
+  .sources li{padding:11px 0;border-top:1px solid var(--hair);}
+  .sources li b{font-weight:600;}
+  .sources .meta{color:var(--slate);font-size:13.5px;}
+
+  @media (min-width:900px){
+    .stage{max-width:1120px;min-height:auto;display:block;padding:clamp(34px,5vh,58px) 36px;}
+    .mast h1{font-size:clamp(44px,5.2vw,60px);text-wrap:wrap;}
+    .mast .standfirst{font-size:clamp(19px,1.5vw,22px);max-width:none;}
+    .mast .pubdates{font-size:14px;margin-top:13px;}
+    .frame{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:18px;padding:30px 38px 24px;margin:16px 0 4px;}
+    .body{display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(34px,4vw,60px);align-items:center;padding:0;}
+    .viz{gap:12px;}
+    .cap .idx{margin-bottom:14px;}
+    .cap .idx .n{font-size:21px;} .cap .idx .t{font-size:17px;}
+    .cap .txt{font-size:clamp(19px,1.4vw,23px);line-height:1.46;}
+    .nav{justify-content:center;gap:clamp(20px,3vw,40px);border-top:1px solid var(--hair);margin-top:22px;padding-top:18px;}
+    .foot{margin-top:18px;}
+    .sources-section{max-width:1120px;padding:36px 36px 72px;}
+    .sources-section h2,.method-note,.sources{max-width:760px;}
+  }
+  @media (max-width:560px){
+    body{font-size:17px;}
+    .stage{padding:clamp(18px,2.6vh,26px) 18px;}
+    .figs{gap:20px;}
+    .sources-section{padding-left:18px;padding-right:18px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .figs,.cap,.dot{transition:none;}
+  }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+
+<main class="stage" id="stage" aria-label="Why AI models top the benchmark and fail the job">
+
+  <header class="mast">
+    <h1>Why AI models <span class="lk">top the benchmark</span> and fail the job</h1>
+    <p class="standfirst">A benchmark scores one step at a time, but a real job is a chain of tasks or steps. For a job to be successful every step has to be correct, if not then the odds fall away faster than the per-step score suggests.</p>
+    <p class="pubdates"><span>Published <time datetime="2026-06-18">June 18, 2026</time></span><span class="sep">&middot;</span><span>Updated <time datetime="2026-06-28">June 28, 2026</time></span></p>
+  </header>
+
+  <div class="frame">
+  <div class="body">
+    <section class="viz">
+      <div class="figs" id="figs"></div>
+      <div class="chartwrap">
+        <canvas class="chart" id="cv" width="1520" height="920" role="img" aria-label="The chance a job finishes as the number of steps grows. At 95% reliability per step it is 95% after one step, a coin flip by step 14, and 36% after 20 steps. A check every five steps holds the run near a 77% floor."></canvas>
+      </div>
+    </section>
+
+    <section class="caps" id="caps" aria-live="polite">
+      <article class="cap" data-i="0">
+        <p class="idx"><span class="n">01</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>An agent that clears 95% of steps finishes a clean 20-step job only 36% of the time.</b> Each step succeeds nineteen times out of twenty, the kind of number that tops a benchmark. But one slip ruins the whole job and the benchmark rarely highlights this challenge.</p>
+      </article>
+      <article class="cap" data-i="1">
+        <p class="idx"><span class="n">02</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>If you hold that 95% accuracy per step then by the 14th step the job's chance of success is equivalent to a coin flip.</b> The whole job only works if every step works, so you multiply that 95% by itself once for each step in the chain. Two steps is 95% of 95%, and by fourteen steps it is down to a coin flip. So the line falls much faster than the per-step number in the benchmark suggests.</p>
+      </article>
+      <article class="cap" data-i="2">
+        <p class="idx"><span class="n">03</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>Now let's look at the big picture. Run 100 of these jobs instead of one, and 64 of them break somewhere before the end.</b> Most of them fail quietly, with no error and no warning that anything went wrong. So most of the time the job comes back looking finished when it is not.</p>
+      </article>
+      <article class="cap" data-i="3">
+        <p class="idx"><span class="n">04</span><span class="t"> / 04</span></p>
+        <p class="txt"><b class="q">So, what is the solution?</b> Insert a checkpoint every few steps that catches a mistake the moment it happens, so the errors never get the chance to pile up. This is something you build into the system yourself, not something a stronger model gives you for free. Ultimately, the real number to engineer around is how many steps you allow between one check and the next in order to get the job finished successfully.</p>
+      </article>
+    </section>
+  </div>
+
+  <nav class="nav" aria-label="Scene navigation">
+    <button class="btn prev" id="prev" type="button" aria-label="Previous scene">&lsaquo; Prev</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn next" id="next" type="button" aria-label="Next scene">Next &rsaquo;</button>
+  </nav>
+  </div>
+
+  <footer class="foot">
+    <span class="src">SWE-bench Verified 80.9% (Anthropic, 2025) &middot; Scale SEAL 45.9% (2026) &middot; curve is 0.95 to the n</span>
+    <a class="me" href="https://www.linkedin.com/in/sjishan" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"></path></svg>
+      <span>linkedin.com/in/sjishan</span>
+    </a>
+  </footer>
+
+</main>
+
+<!--SUBSCRIBE-->
+<section class="sources-section" aria-label="Sources">
+  <h2>Sources and method</h2>
+  <p class="method-note">The curve is plain arithmetic. You take a 95% chance on each step and multiply it across n steps. That is where the three numbers come from. 95%, 77%, and 36% are 0.95 raised to the 1st, 5th, and 20th power, and the coin flip lands at step 14. The benchmark figures are as reported.</p>
+  <ul class="sources">
+    <li><b>SWE-bench Verified, Claude Opus 4.5 at 80.9%</b> (Anthropic, 2025). <span class="meta">The first model past 80% on the 500-issue Verified set.</span> <a href="https://www.swebench.com" target="_blank" rel="noopener">swebench.com</a></li>
+    <li><b>Scale SEAL standardized leaderboard, Opus 4.5 at 45.9%</b> (2026). <span class="meta">The same model on harder, standardized tasks and a neutral harness, a 35-point drop from Verified.</span> <a href="https://scale.com/leaderboard" target="_blank" rel="noopener">scale.com</a></li>
+    <li><b>METR, task-completion time horizon</b> (2025). <span class="meta">The task length an agent finishes with 50% reliability has been doubling roughly every few months.</span> <a href="https://metr.org" target="_blank" rel="noopener">metr.org</a></li>
+  </ul>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var P={emerald:"#0C6A52",emeraldDark:"#08493A",foil:"#8C2240",ink:"#181A15",slate:"#6A6F64",grid:"#E3E6DF",gray:"#A7ABA1"};
+  var NG=20, MONO="'IBM Plex Mono', monospace", SANS="'IBM Plex Sans', Arial, sans-serif";
+
+  var cv=document.getElementById("cv"); if(!cv) return; var ctx=cv.getContext("2d");
+  var LOGW=760, LOGH=460, SS=2;
+  cv.width=LOGW*SS; cv.height=LOGH*SS; ctx.setTransform(SS,0,0,SS,0,0);
+  var W=LOGW, H=LOGH;
+  var L={x0:60, x1:665, y0:30, y1:410};
+  function px(s){ return L.x0+(L.x1-L.x0)*(s/NG); }
+  function py(p){ return L.y1-(L.y1-L.y0)*p; }
+
+  function drawAxes(){
+    var ys=[0,0.5,1], xs=[0,5,10,15,20];
+    ctx.save(); ctx.strokeStyle=P.grid; ctx.lineWidth=1; ctx.globalAlpha=0.9;
+    for(var i=0;i<ys.length;i++){ var yy=py(ys[i]); ctx.beginPath(); ctx.moveTo(L.x0,yy); ctx.lineTo(L.x1,yy); ctx.stroke(); }
+    ctx.restore();
+    ctx.save(); ctx.strokeStyle="#C4C9BB"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(L.x0,py(0)); ctx.lineTo(L.x1,py(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(L.x0,py(1)); ctx.lineTo(L.x0,py(0)); ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.font='600 16px '+MONO; ctx.fillStyle="#2A2D24"; ctx.textAlign="right"; ctx.textBaseline="middle";
+    for(var a=0;a<ys.length;a++){ ctx.fillText(Math.round(ys[a]*100)+"%",L.x0-12,py(ys[a])); }
+    ctx.restore();
+    ctx.save(); ctx.font='600 15px '+SANS; ctx.fillStyle=P.slate; ctx.textAlign="left"; ctx.textBaseline="bottom"; ctx.fillText("still on track",L.x0,L.y0-10); ctx.restore();
+    ctx.save(); ctx.font='600 16px '+MONO; ctx.fillStyle="#2A2D24"; ctx.textAlign="center"; ctx.textBaseline="top";
+    for(var j=0;j<xs.length;j++){ ctx.fillText(xs[j]+"",px(xs[j]),L.y1+12); }
+    ctx.restore();
+    ctx.save(); ctx.font='600 15px '+SANS; ctx.fillStyle=P.slate; ctx.textAlign="right"; ctx.textBaseline="top"; ctx.fillText("number of steps",L.x1,L.y1+31); ctx.restore();
+  }
+  function linePts(r,toStep){ var pts=[]; for(var s=0;s<=toStep+1e-6;s+=0.2){ pts.push([px(s),py(Math.pow(r,s))]); } if(pts.length<2) pts.push([px(toStep),py(Math.pow(r,Math.max(0,toStep)))]); return pts; }
+  function stroke(pts,color,w,alpha,dash){ ctx.save(); ctx.globalAlpha=alpha; ctx.strokeStyle=color; ctx.lineWidth=w; ctx.lineJoin="round"; ctx.lineCap="round"; if(dash)ctx.setLineDash(dash); ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(var i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]); ctx.stroke(); ctx.restore(); }
+  function fillAbove(pts,color,alpha){ ctx.save(); ctx.globalAlpha=alpha; var g=ctx.createLinearGradient(0,L.y0,0,L.y1); g.addColorStop(0,color); g.addColorStop(1,"rgba(255,255,255,0)"); ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(pts[0][0],L.y0); for(var i=0;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]); ctx.lineTo(pts[pts.length-1][0],L.y0); ctx.closePath(); ctx.fill(); ctx.restore(); }
+  function dot(x,y,color,rad){ ctx.save(); ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,rad,0,6.2832); ctx.fill(); ctx.strokeStyle="#fff"; ctx.lineWidth=3; ctx.stroke(); ctx.restore(); }
+  function tag(text,x,y,color){ ctx.save(); ctx.font='700 20px '+MONO; ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.strokeStyle="#FFFFFF"; ctx.lineWidth=4; ctx.lineJoin="round"; ctx.strokeText(text,x,y); ctx.fillStyle=color; ctx.fillText(text,x,y); ctx.restore(); }
+  function buildSaw(r){ var pts=[[px(0),py(1)]]; for(var seg=0;seg<4;seg++){ var base=seg*5; for(var s=base+0.2;s<=base+5+1e-6;s+=0.2){ var ss=Math.min(s,NG); pts.push([px(ss),py(Math.pow(r,ss-base))]); if(ss>=NG) break; } if(base+5<NG) pts.push([px(base+5),py(1)]); } return pts; }
+
+  var beat=-1, extentC=0, divC=0, markC=0, gapC=0;
+  function targets(){ return { e:NG, d:(beat===3)?1:0, m:(beat===1)?1:0, g:(beat===2)?1:0 }; }
+  function ease(c,t,k){ return c+(t-c)*k; }
+
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    drawAxes();
+    var rLine=0.95, col=P.foil;
+    var pts=linePts(rLine,extentC);
+    if(gapC>0.01) fillAbove(pts, P.foil, 0.11*gapC);
+    stroke(pts,col,4,1);
+    if(markC>0.01){
+      var nStar=Math.log(0.5)/Math.log(0.95);
+      if(nStar>0 && nStar<=extentC+0.01 && nStar<=NG){
+        ctx.save(); ctx.globalAlpha=0.9*markC; ctx.strokeStyle=P.gray; ctx.setLineDash([3,4]); ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(px(nStar),py(0.70)); ctx.lineTo(px(nStar),py(0)); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.globalAlpha=markC; ctx.fillStyle=P.slate; ctx.beginPath(); ctx.arc(px(nStar),py(0.5),4,0,6.28); ctx.fill();
+        ctx.font='600 14px '+MONO; ctx.textAlign="center"; ctx.textBaseline="bottom"; ctx.strokeStyle="#FFFFFF"; ctx.lineWidth=4; ctx.lineJoin="round"; ctx.strokeText("coin flip \u00b7 step "+Math.round(nStar),px(nStar),py(0.70)-4); ctx.fillStyle=P.slate; ctx.fillText("coin flip \u00b7 step "+Math.round(nStar),px(nStar),py(0.70)-4); ctx.restore();
+      }
+    }
+    if(divC<=0.5){ dot(px(extentC),py(Math.pow(rLine,extentC)),col,6.5); }
+    if(divC>0.01){
+      var saw=buildSaw(0.95);
+      stroke(saw,P.emerald,4,divC);
+      var yF=py(Math.pow(0.95,20)), yP=py(Math.pow(0.95,5));
+      dot(px(20),yF,P.foil,6); dot(px(20),yP,P.emerald,6);
+      ctx.globalAlpha=divC; tag("36%",px(20)+10,yF,P.foil); tag("77%",px(20)+10,yP,P.emerald); ctx.globalAlpha=1;
+    }
+  }
+
+  var rafId=null;
+  function tick(){
+    var t=targets();
+    extentC=ease(extentC,t.e,0.08); divC=ease(divC,t.d,0.08); markC=ease(markC,t.m,0.11); gapC=ease(gapC,t.g,0.09);
+    render();
+    if(Math.abs(extentC-t.e)>0.01 || Math.abs(divC-t.d)>0.005 || Math.abs(markC-t.m)>0.01 || Math.abs(gapC-t.g)>0.01){ rafId=requestAnimationFrame(tick); }
+    else { extentC=t.e; divC=t.d; markC=t.m; gapC=t.g; render(); rafId=null; }
+  }
+  function kick(){ if(reduce){ var t=targets(); extentC=t.e; divC=t.d; markC=t.m; gapC=t.g; render(); } else if(rafId===null){ rafId=requestAnimationFrame(tick); } }
+  function setChart(b){ if(b===beat) return; beat=b; kick(); }
+
+  render(); // static first frame (axes)
+
+  // ----- scenes (chart beat + the figures shown above the chart) -----
+  var scenes=[
+    { chart:0, figs:[{v:"95%",l:"per step",c:P.gray},{v:"36%",l:"a 20-step job",c:P.foil}] },
+    { chart:1, figs:[{v:"50%",l:"by step 14",c:P.foil}] },
+    { chart:2, figs:[{v:"36",l:"finish clean",c:P.slate},{v:"64",l:"break first",c:P.foil}] },
+    { chart:3, figs:[{v:"77%",l:"checked every 5",c:P.emerald},{v:"36%",l:"no checks",c:P.foil}] }
+  ];
+  var N=scenes.length;
+  var figsEl=document.getElementById('figs'), dotsEl=document.getElementById('dots');
+  var prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+  var caps=[].slice.call(document.querySelectorAll('.cap'));
+  var stageEl=document.getElementById('stage');
+
+  function figsHTML(i){ var f=scenes[i].figs, o=""; for(var j=0;j<f.length;j++){ o+='<div class="fig"><span class="v" style="color:'+f[j].c+'">'+f[j].v+'</span><span class="l">'+f[j].l+'</span></div>'; } return o; }
+
+  var dots=[];
+  for(var d=0;d<N;d++){ (function(k){ var b=document.createElement('button'); b.type='button'; b.className='dot'; b.setAttribute('aria-label','Go to scene '+(k+1)); b.addEventListener('click',function(){ show(k); }); dotsEl.appendChild(b); dots.push(b); })(d); }
+
+  var idx=0, swapT=null;
+  function show(i){
+    i=Math.max(0,Math.min(N-1,i)); idx=i;
+    setChart(scenes[idx].chart);
+    for(var k=0;k<dots.length;k++){ dots[k].classList.toggle('is-on',k===idx); }
+    prevBtn.disabled=(idx===0); nextBtn.disabled=(idx===N-1);
+    if(reduce){
+      figsEl.innerHTML=figsHTML(idx);
+      for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+    } else {
+      figsEl.style.opacity=0;
+      if(swapT) clearTimeout(swapT);
+      swapT=setTimeout(function(){
+        figsEl.innerHTML=figsHTML(idx); figsEl.style.opacity=1;
+        for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+      },160);
+    }
+  }
+
+  prevBtn.addEventListener('click',function(){ show(idx-1); });
+  nextBtn.addEventListener('click',function(){ show(idx+1); });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'){ show(idx+1); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ show(idx-1); }
+  });
+  var x0=null;
+  stageEl.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+  stageEl.addEventListener('touchend',function(e){ if(x0===null) return; var dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40){ show(dx<0?idx+1:idx-1); } x0=null; },{passive:true});
+
+  // ----- init -----
+  figsEl.innerHTML=figsHTML(0);
+  caps[0].classList.add('is-on');
+  dots[0].classList.add('is-on');
+  prevBtn.disabled=true; nextBtn.disabled=(N<=1);
+  setChart(scenes[0].chart); // beat -1 -> 0: draws the curve on (or snaps if reduced motion)
+})();
+</script>
+<!--CHROME:FOOTER-->
+</body>
+</html>

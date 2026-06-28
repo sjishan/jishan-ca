@@ -1,0 +1,37 @@
+<!-- partials/subscribe.html injected at the SUBSCRIBE marker, before the sources block.
+     FILL ONCE: set the form action + hidden fields for your provider, keep the classes.
+       EmailOctopus (recommended): action = your list's embedded subscribe URL;
+         email field name "email_address"; copy the hidden honeypot <input> from your embed.
+       Kit:        action = https://app.kit.com/forms/FORM_ID/subscriptions ; field "email_address".
+       Buttondown: action = https://buttondown.com/api/emails/embed ; field "email";
+         add <input type="hidden" name="embed" value="1">. -->
+<section class="jx-sub" aria-label="Subscribe">
+  <div class="jx-sub-in">
+    <h2 class="jx-sub-h">Get the next one in your inbox</h2>
+    <form class="jx-sub-form" action="https://YOUR-PROVIDER-FORM-ACTION" method="post" target="_blank">
+      <label class="jx-sub-label" for="jx-sub-email">Email address</label>
+      <div class="jx-sub-row">
+        <input class="jx-sub-input" id="jx-sub-email" type="email" name="email_address" placeholder="you@email.com" required autocomplete="email">
+        <button class="jx-sub-btn" type="submit">Subscribe</button>
+      </div>
+      <p class="jx-sub-note" id="jx-sub-note" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+<script>
+  (function(){
+    var f=document.querySelector('.jx-sub-form');
+    if(!f || !window.fetch) return;            /* JS off -> normal POST fallback */
+    var note=document.getElementById('jx-sub-note');
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      var btn=f.querySelector('.jx-sub-btn');
+      if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+      fetch(f.action,{method:'POST',body:new FormData(f),mode:'no-cors'}).catch(function(){}).then(function(){
+        f.reset();
+        if(btn){ btn.disabled=false; btn.textContent='Subscribe'; }
+        if(note){ note.textContent='Thanks — check your inbox to confirm.'; note.classList.add('ok'); }
+      });
+    });
+  })();
+</script>

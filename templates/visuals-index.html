@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visuals - Syed Tanveer Jishan</title>
+<meta name="description" content="Weekly visual teardowns of how AI systems and the products built on them actually behave. Each piece takes a hidden mechanism, makes it move, and lands a decision.">
+<link rel="canonical" href="https://jishan.ca/visuals/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Visuals - Syed Tanveer Jishan">
+<meta property="og:description" content="Weekly visual teardowns of how AI systems behave, for people who ship, operate, and invest.">
+<meta property="og:url" content="https://jishan.ca/visuals/">
+<meta property="og:image" content="https://jishan.ca/assets/og-home.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --ink-soft:#2A2D24; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1; --hair:#E9ECE3;
+    --maxw:1120px; --font:"IBM Plex Sans",Arial,sans-serif; --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+  a{color:var(--emerald-dark);text-decoration:none;}
+  a:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+  .wrap{width:100%;max-width:var(--maxw);margin:0 auto;padding:0 36px;}
+
+  .vintro{padding:clamp(48px,8vh,88px) 0 clamp(10px,1.6vh,18px);}
+  .vintro h1{font-size:clamp(32px,5.6vw,58px);line-height:1.05;letter-spacing:-.022em;font-weight:700;margin:0 0 18px;}
+  .vintro p{font-size:clamp(17px,1.9vw,21px);line-height:1.5;color:var(--ink-soft);max-width:62ch;margin:0;}
+
+  .listwrap{padding:0 0 clamp(48px,8vh,80px);}
+  .shead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;border-top:1px solid var(--ink);padding-top:14px;margin-top:0;}
+  .shead h2{font-size:clamp(19px,2.2vw,24px);font-weight:700;margin:0;letter-spacing:-.01em;}
+  .shead .count{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--slate);letter-spacing:.02em;white-space:nowrap;}
+  .vlist{list-style:none;margin:18px 0 0;padding:0;}
+  .vrow{border-top:1px solid var(--hair);}
+  .vrow:last-child{border-bottom:1px solid var(--hair);}
+  .vrow a{display:grid;grid-template-columns:1fr auto;grid-template-areas:"title date" "dek date";gap:2px 28px;align-items:start;padding:22px 4px 22px 0;color:inherit;transition:padding-left .18s ease;}
+  .vrow a:hover{padding-left:10px;}
+  .vrow .t{grid-area:title;font-size:clamp(20px,2.3vw,27px);line-height:1.18;letter-spacing:-.015em;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:11px;}
+  .vrow a:hover .t{color:var(--emerald-dark);}
+  .vrow .t .ar{color:var(--emerald);opacity:0;transform:translateX(-6px);transition:opacity .18s ease,transform .18s ease;font-weight:400;}
+  .vrow a:hover .t .ar{opacity:1;transform:translateX(0);}
+  .vrow .dek{grid-area:dek;font-size:16px;line-height:1.45;color:var(--slate);max-width:64ch;margin-top:6px;}
+  .vrow .date{grid-area:date;font-family:var(--mono);font-size:13px;font-weight:500;color:var(--gray);white-space:nowrap;padding-top:7px;text-align:right;}
+
+  @media (max-width:760px){
+    body{font-size:17px;}
+    .wrap{padding:0 22px;}
+    .vrow a{grid-template-columns:1fr;grid-template-areas:"title" "dek" "date";gap:6px;}
+    .vrow .date{text-align:left;padding-top:8px;}
+  }
+  @media (prefers-reduced-motion:reduce){ .vrow a,.vrow .t .ar{transition:none;} }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+
+<main>
+  <section class="vintro">
+    <div class="wrap">
+      <h1>Visuals</h1>
+    </div>
+  </section>
+
+  <section class="listwrap">
+    <div class="wrap">
+      <div class="shead"><h2>All pieces</h2><span class="count"><!--VISUALS_COUNT--></span></div>
+      <ul class="vlist"><!--VISUALS_LIST--></ul>
+    </div>
+  </section>
+</main>
+
+<!--SUBSCRIBE-->
+<!--CHROME:FOOTER-->
+</body>
+</html>
