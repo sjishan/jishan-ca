@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why thinking longer makes some AI answers worse</title>
+<meta name="description" content="A reasoning model scored 36 out of 100 on a task it got 42 right with no thinking at all. Why test-time compute has a peak, and how to set the budget.">
+<link rel="canonical" href="https://jishan.ca/visuals/ai-reasoning-overthinking">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why thinking longer makes some AI answers worse">
+<meta property="og:description" content="More thinking is sold as a better answer. On a real task a long chain of thought scored lower than no thinking at all. Where the peak is, and how to budget for it.">
+<meta property="og:url" content="https://jishan.ca/visuals/ai-reasoning-overthinking">
+<meta property="og:image" content="https://jishan.ca/visuals/ai-reasoning-overthinking/poster.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1;
+    --steel:#3C6178; --hair:#E9ECE3;
+    --stageW:600px;
+    --font:"IBM Plex Sans",Arial,sans-serif;
+    --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;display:flex;flex-direction:column;align-items:center;}
+  a{color:var(--emerald-dark);text-decoration:none;border-bottom:1px solid rgba(12,106,82,.28);}
+  a:hover{border-bottom-color:var(--emerald);}
+  a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+
+  .stage{
+    width:100%; max-width:var(--stageW); margin:0 auto; min-height:100svh;
+    padding:clamp(20px,3.2vh,34px) 24px;
+    display:flex; flex-direction:column; font-variant-numeric:tabular-nums;
+  }
+
+  .mast{flex:0 0 auto;}
+  .mast h1{font-size:clamp(28px,6vw,44px);line-height:1.07;letter-spacing:-.02em;font-weight:700;margin:0 0 12px;text-wrap:balance;}
+  .mast h1 .lk{color:var(--foil);}
+  .mast .standfirst{font-size:clamp(16px,2.4vw,20px);line-height:1.45;color:#2A2D24;margin:0;max-width:48ch;}
+  .mast .pubdates{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:11px 0 24px;font-size:13px;color:var(--slate);}
+  .mast .pubdates time{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .mast .pubdates .sep{color:var(--gray);}
+
+  .frame{display:contents;}
+  .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;align-items:stretch;min-height:0;padding:8px 0;}
+  .viz{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;}
+  .figs{display:flex;gap:clamp(22px,6vw,46px);justify-content:center;align-items:flex-start;min-height:76px;transition:opacity .16s ease;}
+  .fig{display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .fig .v{font-family:var(--mono);font-size:clamp(30px,7.6vw,48px);font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .fig .l{font-size:13px;color:var(--slate);margin-top:7px;max-width:16ch;line-height:1.3;}
+  .chartwrap{width:100%;}
+  svg.chart{width:100%;height:auto;display:block;overflow:visible;}
+
+  .caps{position:relative;}
+  .cap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
+  .cap.is-on{opacity:1;pointer-events:auto;position:relative;}
+  .cap .idx{font-family:var(--mono);margin:0 0 10px;}
+  .cap .idx .n{font-size:19px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .cap .idx .t{font-size:16px;font-weight:600;color:var(--slate);}
+  .cap .txt{font-size:clamp(17px,2.5vw,20px);line-height:1.34;letter-spacing:-.005em;color:var(--ink);margin:0;}
+  .cap .txt b{font-weight:700;}
+  .cap .txt b.q{color:var(--emerald);}
+
+  .nav{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;}
+  .btn{font-family:var(--font);font-size:15px;font-weight:600;color:var(--emerald-dark);background:none;border:1px solid var(--hair);border-radius:999px;padding:9px 17px;cursor:pointer;transition:border-color .15s ease;}
+  .btn:hover:not(:disabled){border-color:var(--emerald);}
+  .btn:disabled{opacity:.3;cursor:default;}
+  .dots{display:flex;gap:9px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--gray);border:none;padding:0;cursor:pointer;opacity:.45;transition:opacity .2s ease,transform .2s ease,background .2s ease;}
+  .dot.is-on{background:var(--emerald);opacity:1;transform:scale(1.18);}
+
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:10px;padding-top:13px;border-top:1px solid var(--hair);font-size:12px;color:var(--slate);}
+  .foot .src{max-width:64%;line-height:1.3;}
+  .foot .me{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--slate);border:none;}
+  .foot .me svg{width:14px;height:14px;display:block;fill:currentColor;}
+
+  .subscribe{width:100%;max-width:var(--stageW);margin:0 auto;padding:30px 24px 6px;}
+  .subscribe .card{border:1px solid var(--hair);border-radius:16px;padding:22px 24px;background:#FCFDFB;}
+  .subscribe h2{font-size:clamp(18px,2.6vw,22px);line-height:1.15;letter-spacing:-.01em;margin:0 0 4px;font-weight:700;}
+  .subscribe p{font-size:14px;color:var(--slate);margin:0 0 14px;line-height:1.45;}
+  .subscribe .row{display:flex;gap:9px;flex-wrap:wrap;}
+  .subscribe input{flex:1 1 220px;min-width:0;font-family:var(--font);font-size:15px;color:var(--ink);background:#fff;border:1px solid var(--hair);border-radius:999px;padding:11px 16px;}
+  .subscribe input::placeholder{color:var(--gray);}
+  .subscribe button{flex:0 0 auto;font-family:var(--font);font-size:15px;font-weight:600;color:#fff;background:var(--emerald);border:none;border-radius:999px;padding:11px 22px;cursor:pointer;transition:background .15s ease;}
+  .subscribe button:hover{background:var(--emerald-dark);}
+
+  .sources-section{width:100%;max-width:var(--stageW);margin:0 auto;padding:30px 24px 64px;}
+  .sources-section h2{font-size:clamp(20px,3vw,25px);line-height:1.16;letter-spacing:-.01em;margin:0 0 8px;font-weight:700;}
+  .method-note{font-size:14px;line-height:1.6;color:var(--slate);margin:0 0 18px;}
+  .sources{font-size:15px;color:#31342A;list-style:none;padding:0;margin:0;}
+  .sources li{padding:11px 0;border-top:1px solid var(--hair);}
+  .sources li:first-child{border-top:none;}
+  .sources li b{font-weight:600;}
+  .sources .meta{color:var(--slate);font-size:13.5px;}
+
+  #chart .ph{transition:opacity .45s ease;}
+  #chart .draw{transition:stroke-dashoffset .95s cubic-bezier(.33,.1,.2,1),opacity .4s ease;}
+  #chart .bar{transition:opacity .5s ease,transform .6s cubic-bezier(.22,1,.36,1);}
+
+  @media (min-width:900px){
+    .stage{max-width:1120px;min-height:auto;display:block;padding:clamp(34px,5vh,58px) 36px;}
+    .mast h1{font-size:clamp(44px,5.2vw,60px);text-wrap:wrap;}
+    .mast .standfirst{font-size:clamp(19px,1.5vw,22px);max-width:none;}
+    .mast .pubdates{font-size:14px;margin-top:13px;}
+    .frame{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:18px;padding:30px 38px 24px;margin:16px 0 4px;}
+    .body{display:grid;grid-template-columns:1.32fr 1fr;gap:clamp(34px,4vw,60px);align-items:center;padding:0;}
+    .viz{gap:12px;}
+    .cap .idx{margin-bottom:14px;}
+    .cap .idx .n{font-size:21px;} .cap .idx .t{font-size:17px;}
+    .cap .txt{font-size:clamp(19px,1.4vw,23px);line-height:1.46;}
+    .nav{justify-content:center;gap:clamp(20px,3vw,40px);border-top:1px solid var(--hair);margin-top:22px;padding-top:18px;}
+    .foot{margin-top:18px;}
+    .subscribe{max-width:1120px;padding:34px 36px 8px;}
+    .subscribe .card{max-width:760px;}
+    .sources-section{max-width:1120px;padding:34px 36px 72px;}
+    .sources-section h2,.method-note,.sources{max-width:760px;}
+  }
+  @media (max-width:560px){
+    body{font-size:17px;}
+    .stage{padding:clamp(18px,2.6vh,26px) 18px;}
+    .figs{gap:18px;}
+    .subscribe,.sources-section{padding-left:18px;padding-right:18px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .figs,.cap,.dot,#chart .ph,#chart .draw,#chart .bar{transition:none;}
+  }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+
+<main class="stage" id="stage" aria-label="Why thinking longer makes some AI answers worse">
+
+  <header class="mast">
+    <h1>Why thinking longer makes some AI answers <span class="lk">worse</span></h1>
+    <p class="standfirst">Reasoning models come with a simple promise i.e., giving a model more time to think buys a better answer. On a real task a long chain of thought scored lower than no thinking at all and that is because the amount of thinking that helps is far smaller than the amount most teams pay for.</p>
+    <p class="pubdates"><span>Published <time datetime="2026-06-25">June 25, 2026</time></span><span class="sep">&middot;</span><span>Updated <time datetime="2026-06-25">June 25, 2026</time></span></p>
+  </header>
+
+  <div class="frame">
+  <div class="body">
+    <section class="viz">
+      <div class="figs" id="figs"></div>
+      <div class="chartwrap">
+        <svg class="chart" id="chart" viewBox="0 0 760 430" role="img" aria-label="Answers gained versus no thinking, as a model thinks for longer. A short burst of reasoning adds about three answers per hundred, then the curve falls below the no-thinking line to six worse after a long chain of thought. Broken into equal steps, only the first step adds answers and every step after subtracts them. On a hard task, more thinking instead lifts the score from 16 to 71, so the right amount of thinking depends on the difficulty.">
+          <g id="dyn"></g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="caps" id="caps" aria-live="polite">
+      <article class="cap" data-i="0">
+        <p class="idx"><span class="n">01</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>A model given a long time to think answered just 36 of 100 questions right on a real classification task, down from the 42 it got with no thinking at all.</b> The score is plain accuracy, the share of questions the model labels correctly, so 42 right means 42 of every 100 attempts. A reasoning model spends extra words working a problem out before it answers, and on a hard question that working-out helps. But the help does not last. Past a point the model starts second-guessing answers it already had right, and talks itself into worse ones. So accuracy does not climb with effort the way the promise suggests. It rises to a peak, and then bends back down.</p>
+      </article>
+      <article class="cap" data-i="1">
+        <p class="idx"><span class="n">02</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>Almost all of that gain shows up in the first short burst of thinking, and the best the model actually reaches is about 45 out of 100, at around 150 tokens of reasoning.</b> But once you break the thinking budget into equal chunks and measure what each chunk adds to the score then it is indicative the first chunk does most of the work. Each chunk after it adds a little less, then nothing, and the chunks after that take the points away. That last stretch is the overthinking, where the extra reasoning is mostly wrong turns the model then follows to a worse answer.</p>
+      </article>
+      <article class="cap" data-i="2">
+        <p class="idx"><span class="n">03</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>On an easy task a long think added about 3 points before it backfired, but on hard competition math, more thinking carried a model from 16 out of 100 to 71.</b> It is evident that how much thinking pays off depends on how hard the problem is. An easy question reaches its best answer almost at once and then overthinks, so a long chain of thought is wasted on it. A hard question keeps improving for much longer, so cutting it short leaves the right answer on the table. This is why a single thinking setting for every task is the wrong default.</p>
+      </article>
+      <article class="cap" data-i="3">
+        <p class="idx"><span class="n">04</span><span class="t"> / 04</span></p>
+        <p class="txt"><b class="q">So, what is the solution?</b> Set the thinking budget to fit the task, and stop paying for thinking once the score stops climbing. Send the easy, high-volume work to a fast model with little or no reasoning, and keep the long chains for the genuinely hard problems that keep getting better with them. The number worth engineering around is the budget that sits between enough thinking and too much. You will not get that line from a stronger model. You set it yourself.</p>
+      </article>
+    </section>
+  </div>
+
+  <nav class="nav" aria-label="Scene navigation">
+    <button class="btn prev" id="prev" type="button" aria-label="Previous scene">&lsaquo; Prev</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn next" id="next" type="button" aria-label="Next scene">Next &rsaquo;</button>
+  </nav>
+  </div>
+
+  <footer class="foot">
+    <span class="src">Don&rsquo;t Think Twice (arXiv 2508.15050) &middot; When More Thinking Hurts (arXiv 2604.10739) &middot; 2026</span>
+    <a class="me" href="https://www.linkedin.com/in/sjishan" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"></path></svg>
+      <span>linkedin.com/in/sjishan</span>
+    </a>
+  </footer>
+
+</main>
+
+<!-- subscribe block injected at build time -->
+
+<!--SUBSCRIBE-->
+<section class="sources-section" aria-label="Sources">
+  <h2>Sources and method</h2>
+  <p class="method-note">The arc plots one published result as the gain over the model&rsquo;s no-thinking score. It is anchored to three measured points, about 42 right with no thinking, a peak near 45 around 150 tokens, and 36 after a long chain of thought, with the shape between them drawn to read clearly. The bars are the gain each equal step of thinking adds, read straight off that curve. The difficulty scene places two different tasks on one axis to compare their shape, an easy classification task that barely moves and a hard competition-math task that climbs from 16 to 71. They run on very different token scales, so those curves show the shape of each rather than measured values, with the real magnitudes carried in the caption. The 47% token figure is GPT-5.4 against GPT-5.2 on complex tasks, as reported by OpenAI.</p>
+  <ul class="sources">
+    <li><b>Don&rsquo;t Think Twice. Over-Reasoning Impairs Confidence Calibration</b> (arXiv 2508.15050). <span class="meta">On a real classification task, accuracy rose from 41.7% with single-step inference to a peak of 45.0% near 64 to 192 tokens, then fell to 35.7% by 768 tokens as the model over-reasoned. The 42, 45, and 36 anchors come from here.</span> <a href="https://arxiv.org/abs/2508.15050" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>When More Thinking Hurts. Overthinking in LLM Test-Time Compute Scaling</b> (2026). <span class="meta">Marginal returns from extra reasoning tokens diminish at higher budgets, extended reasoning is associated with abandoning previously correct answers, and the best thinking length varies with problem difficulty.</span> <a href="https://arxiv.org/abs/2604.10739" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>DeepSeek-R1</b> (DeepSeek-AI, 2025). <span class="meta">Extended chain-of-thought reasoning lifted AIME accuracy from 15.6% to 71%, the hard-task case where more thinking keeps paying off.</span> <a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>Scaling LLM Test-Time Compute Optimally</b> (Snell et al., 2024). <span class="meta">There is a compute-optimal amount of test-time thinking for a given problem difficulty, and spending past it is waste. The theory under the peak.</span> <a href="https://arxiv.org/abs/2408.03314" target="_blank" rel="noopener">arxiv.org</a></li>
+  </ul>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SVGNS="http://www.w3.org/2000/svg";
+  var C={emerald:"#0C6A52",emeraldDark:"#08493A",foil:"#8C2240",ink:"#181A15",slate:"#6A6F64",grid:"#E3E6DF",gray:"#A7ABA1",steel:"#3C6178"};
+  var SANS="'IBM Plex Sans',Arial,sans-serif", MONO="'IBM Plex Mono',monospace";
+
+  var VBW=760,VBH=430,PADL=66,PADR=86,PADT=30,PADB=56;
+  var pxL=PADL,pxR=VBW-PADR,pyT=PADT,pyB=VBH-PADB,PW=pxR-pxL,PH=pyB-pyT;
+  var TMAX=800, DMAX=768, NOTHINK=42;
+  function X(t){return pxL+(t/TMAX)*PW;}
+  var D_LO=-7, D_HI=4;                       // delta axis (S1, S4)
+  function Yd(d){return pyB-((d-D_LO)/(D_HI-D_LO))*PH;}
+  var A_TOP=80;                              // absolute axis (S3)
+  function Ya(a){return pyB-(a/A_TOP)*PH;}
+  var G_TOP=3.2, G_BOT=-2.4;                 // per-step gain axis (S2)
+  function Yg(g){return pyT+((G_TOP-g)/(G_TOP-G_BOT))*PH;}
+
+  function acc(t){return 42+4.2*(1-Math.exp(-t/70))-10.2*Math.pow(t/DMAX,1.6);}
+  function dlt(t){return acc(t)-42;}
+  function hard(t){return 16+57*(1-Math.exp(-t/230));}
+
+  var tPeak=0,aPeak=-1,tCross=DMAX;
+  (function(){var pa=true;for(var t=0;t<=DMAX;t++){var a=acc(t);if(a>aPeak){aPeak=a;tPeak=t;}if(pa&&a<NOTHINK&&t>tPeak){tCross=t;pa=false;}}})();
+  var tHardBest=700;
+
+  function el(tag,a){var e=document.createElementNS(SVGNS,tag),k;for(k in a){if(a.hasOwnProperty(k))e.setAttribute(k,a[k]);}return e;}
+  function ydDelta(t){return Yd(dlt(t));}
+  function yaAcc(t){return Ya(acc(t));}
+  function yaHard(t){return Ya(hard(t));}
+  function pathD(t0,t1,yfn){var d="",t;for(t=t0;t<=t1+1e-6;t+=4){d+=(t===t0?"M":"L")+X(t).toFixed(2)+","+yfn(t).toFixed(2)+" ";}return d.trim();}
+  function txt(x,y,s,size,fill,weight,anchor,fam,halo,extra){var o={x:x,y:y,"font-size":size,fill:fill,"font-weight":weight||400,"text-anchor":anchor||"start","font-family":fam||SANS,"class":"ph",opacity:0};if(halo){o["paint-order"]="stroke";o.stroke="#FFFFFF";o["stroke-width"]=4;o["stroke-linejoin"]="round";}if(extra){for(var k in extra)o[k]=extra[k];}var e=el("text",o);e.textContent=s;return e;}
+
+  var dyn=document.getElementById('dyn'); if(!dyn) return;
+
+  // shared x-axis
+  var xAxis=el('g',{});
+  xAxis.appendChild(el('line',{x1:pxL,y1:pyB,x2:pxR,y2:pyB,stroke:"#C4C9BB","stroke-width":1.5}));
+  [0,400,800].forEach(function(t){var e=el('text',{x:X(t),y:pyB+24,fill:"#2A2D24","font-size":16,"text-anchor":"middle","font-family":MONO});e.textContent=t;xAxis.appendChild(e);});
+  var xl=el('text',{x:pxR,y:pyB+44,fill:C.slate,"font-size":15,"font-weight":600,"text-anchor":"end","font-family":SANS});xl.textContent="how long it thinks (tokens)";xAxis.appendChild(xl);
+  dyn.appendChild(xAxis);
+
+  // delta y-axis (S1 & S4)
+  var yDelta=el('g',{"class":"ph",opacity:0});
+  [3,-3,-6].forEach(function(d){yDelta.appendChild(el('line',{x1:pxL,y1:Yd(d),x2:pxR,y2:Yd(d),stroke:C.grid,"stroke-width":1}));var e=el('text',{x:pxL-9,y:Yd(d)+4,fill:"#2A2D24","font-size":16,"text-anchor":"end","font-family":MONO});e.textContent=(d>0?"+":"")+d;yDelta.appendChild(e);});
+  yDelta.appendChild(el('line',{x1:pxL,y1:Yd(0),x2:pxR,y2:Yd(0),stroke:"#9CA295","stroke-width":1.5}));
+  var z0=el('text',{x:pxL-9,y:Yd(0)+4,fill:"#2A2D24","font-size":16,"text-anchor":"end","font-family":MONO});z0.textContent="0";yDelta.appendChild(z0);
+  yDelta.appendChild(el('line',{x1:pxL,y1:pyT,x2:pxL,y2:pyB,stroke:"#C4C9BB","stroke-width":1.5}));
+  var ydlab=el('text',{x:pxL,y:pyT-11,fill:C.slate,"font-size":15,"font-weight":600,"font-family":SANS});ydlab.textContent="answers gained vs no thinking";yDelta.appendChild(ydlab);
+  dyn.appendChild(yDelta);
+  var zlabel=txt(pxL+6,Yd(0)+17,"no thinking",14,C.slate,600,"start",SANS,true);
+  dyn.appendChild(zlabel);
+
+  // absolute y-axis (S3)
+  var yAbs=el('g',{"class":"ph",opacity:0});
+  [0,40,80].forEach(function(a){yAbs.appendChild(el('line',{x1:pxL,y1:Ya(a),x2:pxR,y2:Ya(a),stroke:C.grid,"stroke-width":1}));var e=el('text',{x:pxL-9,y:Ya(a)+4,fill:"#2A2D24","font-size":16,"text-anchor":"end","font-family":MONO});e.textContent=a;yAbs.appendChild(e);});
+  yAbs.appendChild(el('line',{x1:pxL,y1:pyT,x2:pxL,y2:pyB,stroke:"#C4C9BB","stroke-width":1.5}));
+  var yalab=el('text',{x:pxL,y:pyT-11,fill:C.slate,"font-size":15,"font-weight":600,"font-family":SANS});yalab.textContent="answers right (of 100)";yAbs.appendChild(yalab);
+  dyn.appendChild(yAbs);
+
+  // per-step gain y-axis (S2)
+  var yGain=el('g',{"class":"ph",opacity:0});
+  [2,-2].forEach(function(g){yGain.appendChild(el('line',{x1:pxL,y1:Yg(g),x2:pxR,y2:Yg(g),stroke:C.grid,"stroke-width":1}));var e=el('text',{x:pxL-9,y:Yg(g)+4,fill:"#2A2D24","font-size":16,"text-anchor":"end","font-family":MONO});e.textContent=(g>0?"+":"")+g;yGain.appendChild(e);});
+  yGain.appendChild(el('line',{x1:pxL,y1:Yg(0),x2:pxR,y2:Yg(0),stroke:"#9CA295","stroke-width":1.5}));
+  var gz=el('text',{x:pxL-9,y:Yg(0)+4,fill:"#2A2D24","font-size":16,"text-anchor":"end","font-family":MONO});gz.textContent="0";yGain.appendChild(gz);
+  yGain.appendChild(el('line',{x1:pxL,y1:pyT,x2:pxL,y2:pyB,stroke:"#C4C9BB","stroke-width":1.5}));
+  var yglab=el('text',{x:pxL,y:pyT-11,fill:C.slate,"font-size":15,"font-weight":600,"font-family":SANS});yglab.textContent="answers gained by each step";yGain.appendChild(yglab);
+  var gzr=el('text',{x:pxR,y:Yg(0)-7,fill:C.slate,"font-size":13,"font-weight":600,"text-anchor":"end","font-family":SANS});gzr.textContent="no change";yGain.appendChild(gzr);
+  dyn.appendChild(yGain);
+
+  // S1 areas + arc
+  function areaToZero(t0,t1){var d="M"+X(t0).toFixed(2)+","+Yd(0).toFixed(2)+" ",t;for(t=t0;t<=t1+1e-6;t+=4){d+="L"+X(t).toFixed(2)+","+ydDelta(t).toFixed(2)+" ";}d+="L"+X(t1).toFixed(2)+","+Yd(0).toFixed(2)+" Z";return d;}
+  var areaPos=el('path',{d:areaToZero(0,tCross),fill:C.emerald,stroke:"none","class":"ph",opacity:0});
+  var areaNeg=el('path',{d:areaToZero(tCross,DMAX),fill:C.foil,stroke:"none","class":"ph",opacity:0});
+  dyn.appendChild(areaPos);dyn.appendChild(areaNeg);
+
+  var arc=el('path',{d:pathD(0,DMAX,ydDelta),fill:"none",stroke:C.ink,"stroke-width":4,"stroke-linecap":"round","stroke-linejoin":"round","class":"draw"});
+  dyn.appendChild(arc);
+  var arcLen=900;try{arcLen=arc.getTotalLength();}catch(e){}
+  arc.setAttribute("stroke-dasharray",arcLen);arc.setAttribute("stroke-dashoffset",arcLen);
+
+  var peakDotD=el('circle',{cx:X(tPeak),cy:ydDelta(tPeak),r:6,fill:C.emerald,stroke:"#fff","stroke-width":2.5,"class":"ph",opacity:0});
+  var peakTagD=txt(X(tPeak),ydDelta(tPeak)-13,"+3",17,C.emerald,700,"middle",MONO,true);
+  var endDotD=el('circle',{cx:X(DMAX),cy:ydDelta(DMAX),r:6,fill:C.foil,stroke:"#fff","stroke-width":2.5,"class":"ph",opacity:0});
+  var endTagD=txt(X(DMAX),ydDelta(DMAX)+20,"\u22126",17,C.foil,700,"middle",MONO,true);
+  var worseLab=txt(pxR-8,196,"worse than not thinking",14,C.foil,600,"end",SANS,true);
+  dyn.appendChild(peakDotD);dyn.appendChild(peakTagD);dyn.appendChild(endDotD);dyn.appendChild(endTagD);dyn.appendChild(worseLab);
+
+  // S2 bars
+  var NCH=8, chunk=DMAX/NCH, bars=[], divs=[];
+  for(var c=0;c<NCH;c++){
+    var t0=c*chunk,t1=(c+1)*chunk,g=acc(t1)-acc(t0);
+    var cx=X((t0+t1)/2), bw=(X(chunk)-X(0))*0.6;
+    var yTop=(g>=0)?Yg(g):Yg(0), h=Math.abs(Yg(g)-Yg(0));
+    var col=(g>=0)?C.emerald:C.foil;
+    var r=el('rect',{x:(cx-bw/2).toFixed(1),y:yTop.toFixed(1),width:bw.toFixed(1),height:Math.max(0.6,h).toFixed(1),rx:3,fill:col,"class":"bar",opacity:0});
+    r.style.transform="translateY(12px)";r.style.transitionDelay=(reduce?0:(0.05+c*0.055))+"s";
+    bars.push(r);dyn.appendChild(r);
+    if(c>0){var dv=el('line',{x1:X(t0),y1:pyT+6,x2:X(t0),y2:pyB,stroke:C.grid,"stroke-width":1,"class":"ph",opacity:0});divs.push(dv);dyn.appendChild(dv);}
+  }
+  var s2a=txt(X(40),Yg(acc(chunk)-acc(0))-12,"the gain is here",14,C.emerald,600,"start",SANS,true);
+  var s2b=txt(X(530),Yg(0.42),"every step here takes points back",14,C.foil,600,"middle",SANS,true);
+  dyn.appendChild(s2a);dyn.appendChild(s2b);
+
+  // S3 absolute curves
+  var easyAbs=el('path',{d:pathD(0,DMAX,yaAcc),fill:"none",stroke:C.ink,"stroke-width":4,"stroke-linecap":"round","stroke-linejoin":"round","class":"ph",opacity:0});
+  var hardAbs=el('path',{d:pathD(0,DMAX,yaHard),fill:"none",stroke:C.steel,"stroke-width":4,"stroke-linecap":"round","stroke-linejoin":"round","class":"draw"});
+  dyn.appendChild(easyAbs);dyn.appendChild(hardAbs);
+  var hardLen=900;try{hardLen=hardAbs.getTotalLength();}catch(e){}
+  hardAbs.setAttribute("stroke-dasharray",hardLen);hardAbs.setAttribute("stroke-dashoffset",hardLen);hardAbs.style.transitionDelay="0s";
+  var easyPeakA=el('circle',{cx:X(tPeak),cy:yaAcc(tPeak),r:5.5,fill:C.ink,stroke:"#fff","stroke-width":2.5,"class":"ph",opacity:0});
+  var hardEndA=el('circle',{cx:X(DMAX),cy:yaHard(DMAX),r:6,fill:C.steel,stroke:"#fff","stroke-width":2.5,"class":"ph",opacity:0});
+  var hardTagA=txt(X(DMAX)-6,yaHard(DMAX)-9,"71",17,C.steel,700,"end",MONO,true);
+  dyn.appendChild(easyPeakA);dyn.appendChild(hardEndA);dyn.appendChild(hardTagA);
+  var easyNote=txt(X(110),158,"easy peaks early",14,C.ink,600,"middle",SANS,true);
+  var hardNote=txt(X(560),150,"hard keeps improving",14,C.steel,600,"middle",SANS,true);
+  dyn.appendChild(easyNote);dyn.appendChild(hardNote);
+  var legend=el('g',{"class":"ph",opacity:0});
+  var lx=pxL+14,ly=pyT+8;
+  legend.appendChild(el('line',{x1:lx,y1:ly,x2:lx+22,y2:ly,stroke:C.ink,"stroke-width":4,"stroke-linecap":"round"}));
+  var le1=el('text',{x:lx+30,y:ly+5,fill:"#2A2D24","font-size":14,"font-weight":600,"font-family":SANS});le1.textContent="easy task";legend.appendChild(le1);
+  legend.appendChild(el('line',{x1:lx,y1:ly+22,x2:lx+22,y2:ly+22,stroke:C.steel,"stroke-width":4,"stroke-linecap":"round"}));
+  var le2=el('text',{x:lx+30,y:ly+27,fill:"#2A2D24","font-size":14,"font-weight":600,"font-family":SANS});le2.textContent="hard task";legend.appendChild(le2);
+  dyn.appendChild(legend);
+  var illus=txt(pxR,pyT-11,"curves show the shape, not measured values",12.5,C.gray,400,"end",SANS,false,{"font-style":"italic"});
+  dyn.appendChild(illus);
+
+  // S4 optimum + waste (delta frame)
+  var waste=el('rect',{x:X(tPeak).toFixed(1),y:pyT.toFixed(1),width:(X(DMAX)-X(tPeak)).toFixed(1),height:(pyB-pyT).toFixed(1),fill:C.foil,"class":"ph",opacity:0});
+  dyn.appendChild(waste);
+  var optLine=el('line',{x1:X(tPeak),y1:pyT,x2:X(tPeak),y2:pyB,stroke:C.emerald,"stroke-width":2,"class":"ph",opacity:0});
+  dyn.appendChild(optLine);
+  var optLab=txt(X(tPeak)+10,ydDelta(tPeak)-14,"stop at the peak",14,C.emerald,700,"start",SANS,true);
+  var wasteLab=txt(X(540),Yd(0.9),"more cost, no better",14,C.foil,600,"middle",SANS,true);
+  dyn.appendChild(optLab);dyn.appendChild(wasteLab);
+
+  // ===== scene wiring =====
+  function op(n,v){n.style.opacity=v;}
+  function opl(a,v){for(var i=0;i<a.length;i++)a[i].style.opacity=v;}
+
+  function applyScene(s){
+    op(yDelta,(s===0||s===3)?1:0);
+    op(yAbs,(s===2)?1:0);
+    op(yGain,(s===1)?1:0);
+    op(zlabel,(s===0)?1:0);
+    // S1 arc + areas + marks (arc element reused in S4)
+    op(areaPos,s===0?0.10:0);
+    op(areaNeg,s===0?0.12:0);
+    op(arc,(s===0||s===3)?1:0);
+    op(peakDotD,(s===0||s===3)?1:0);
+    op(peakTagD,s===0?1:0);
+    op(endDotD,s===0?1:0);
+    op(endTagD,s===0?1:0);
+    op(worseLab,s===0?1:0);
+    // S2 bars
+    for(var i=0;i<bars.length;i++){bars[i].style.opacity=(s===1)?1:0;bars[i].style.transform=(s===1)?"translateY(0px)":"translateY(12px)";}
+    opl(divs,s===1?1:0);
+    op(s2a,s===1?1:0);op(s2b,s===1?1:0);
+    // S3 absolute curves
+    op(easyAbs,s===2?1:0);
+    op(hardAbs,s===2?1:0);
+    hardAbs.setAttribute("stroke-dashoffset",s===2?0:hardLen);
+    hardAbs.style.transitionDelay=(s===2&&!reduce)?"0.3s":"0s";
+    op(easyPeakA,s===2?1:0);op(hardEndA,s===2?1:0);op(hardTagA,s===2?1:0);
+    op(easyNote,s===2?1:0);op(hardNote,s===2?1:0);
+    op(legend,s===2?1:0);op(illus,s===2?1:0);
+    // S4 optimum + waste
+    op(waste,s===3?0.10:0);
+    op(optLine,s===3?1:0);
+    op(optLab,s===3?1:0);
+    op(wasteLab,s===3?1:0);
+  }
+
+  var scenes=[
+    {chart:0,figs:[{v:"42",l:"no thinking",c:C.gray},{v:"36",l:"a long chain of thought",c:C.foil}]},
+    {chart:1,figs:[{v:"+3",l:"the first burst",c:C.emerald},{v:"\u2248150",l:"tokens, then downhill",c:C.slate}]},
+    {chart:2,figs:[{v:"+3",l:"easy task",c:C.slate},{v:"+55",l:"hard task",c:C.steel}]},
+    {chart:3,figs:[{v:"47%",l:"fewer tokens, same work (GPT-5.4 vs 5.2)",c:C.emerald},{v:"past the peak",l:"more cost, no better",c:C.foil}]}
+  ];
+  var N=scenes.length;
+  var figsEl=document.getElementById('figs'),dotsEl=document.getElementById('dots');
+  var prevBtn=document.getElementById('prev'),nextBtn=document.getElementById('next');
+  var caps=[].slice.call(document.querySelectorAll('.cap'));
+  var stageEl=document.getElementById('stage');
+
+  function figsHTML(i){var f=scenes[i].figs,o="";for(var j=0;j<f.length;j++){o+='<div class="fig"><span class="v" style="color:'+f[j].c+'">'+f[j].v+'</span><span class="l">'+f[j].l+'</span></div>';}return o;}
+
+  var dots=[];
+  for(var d=0;d<N;d++){(function(k){var b=document.createElement('button');b.type='button';b.className='dot';b.setAttribute('aria-label','Go to scene '+(k+1));b.addEventListener('click',function(){show(k);});dotsEl.appendChild(b);dots.push(b);})(d);}
+
+  var idx=0,swapT=null;
+  function show(i){
+    i=Math.max(0,Math.min(N-1,i));idx=i;
+    applyScene(scenes[idx].chart);
+    for(var k=0;k<dots.length;k++){dots[k].classList.toggle('is-on',k===idx);}
+    prevBtn.disabled=(idx===0);nextBtn.disabled=(idx===N-1);
+    if(reduce){
+      figsEl.innerHTML=figsHTML(idx);
+      for(var m=0;m<caps.length;m++){caps[m].classList.toggle('is-on',m===idx);}
+    }else{
+      figsEl.style.opacity=0;
+      if(swapT)clearTimeout(swapT);
+      swapT=setTimeout(function(){figsEl.innerHTML=figsHTML(idx);figsEl.style.opacity=1;for(var m=0;m<caps.length;m++){caps[m].classList.toggle('is-on',m===idx);}},160);
+    }
+  }
+
+  prevBtn.addEventListener('click',function(){show(idx-1);});
+  nextBtn.addEventListener('click',function(){show(idx+1);});
+  document.addEventListener('keydown',function(e){if(e.key==='ArrowRight'||e.key==='PageDown'){show(idx+1);}else if(e.key==='ArrowLeft'||e.key==='PageUp'){show(idx-1);}});
+  var sx=null;
+  stageEl.addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});
+  stageEl.addEventListener('touchend',function(e){if(sx===null)return;var dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>40){show(dx<0?idx+1:idx-1);}sx=null;},{passive:true});
+
+  // init: static frame, then draw the opening arc on
+  figsEl.innerHTML=figsHTML(0);
+  caps[0].classList.add('is-on');
+  dots[0].classList.add('is-on');
+  prevBtn.disabled=true;nextBtn.disabled=(N<=1);
+  applyScene(0);
+  if(reduce){arc.setAttribute("stroke-dashoffset",0);}
+  else{arc.setAttribute("stroke-dashoffset",arcLen);requestAnimationFrame(function(){requestAnimationFrame(function(){arc.setAttribute("stroke-dashoffset",0);});});}
+})();
+</script>
+<!--CHROME:FOOTER-->
+</body>
+</html>
