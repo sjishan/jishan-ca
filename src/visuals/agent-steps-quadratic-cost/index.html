@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why doubling an agent's steps quadruples its bill</title>
+<meta name="description" content="An AI agent re-reads its whole history on every step, so cost grows with the square of the steps. Why doubling an agent's steps roughly quadruples its token bill.">
+<link rel="canonical" href="https://jishan.ca/visuals/agent-steps-quadratic-cost">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why doubling an agent's steps quadruples its bill">
+<meta property="og:description" content="An agent re-reads its whole history every step, so nine-tenths of a long task's bill is re-reading, not new work, and cost grows with the square of the steps.">
+<meta property="og:url" content="https://jishan.ca/visuals/agent-steps-quadratic-cost">
+<meta property="og:image" content="https://jishan.ca/visuals/agent-steps-quadratic-cost/poster.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<!-- inject:head -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1;
+    --hair:#E9ECE3;
+    --stageW:600px;
+    --font:"IBM Plex Sans",Arial,sans-serif;
+    --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;display:flex;flex-direction:column;align-items:center;}
+  a{color:var(--emerald-dark);text-decoration:none;border-bottom:1px solid rgba(12,106,82,.28);}
+  a:hover{border-bottom-color:var(--emerald);}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+
+  .stage{
+    width:100%; max-width:var(--stageW); margin:0 auto; min-height:100svh;
+    padding:clamp(20px,3.2vh,34px) 24px;
+    display:flex; flex-direction:column; font-variant-numeric:tabular-nums;
+  }
+
+  .mast{flex:0 0 auto;}
+  .mast h1{font-size:clamp(28px,6vw,44px);line-height:1.07;letter-spacing:-.02em;font-weight:700;margin:0 0 12px;text-wrap:balance;}
+  .mast h1 .lk{color:var(--foil);}
+  .mast h1 .em{color:var(--emerald);}
+  .mast .standfirst{font-size:clamp(16px,2.4vw,20px);line-height:1.45;color:#2A2D24;margin:0;max-width:46ch;}
+  .mast .pubdates{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:11px 0 24px;font-size:13px;color:var(--slate);}
+  .mast .pubdates time{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .mast .pubdates .sep{color:var(--gray);}
+
+  .frame{display:contents;}
+  .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;align-items:stretch;min-height:0;padding:8px 0;}
+  .viz{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;}
+  .figs{display:flex;gap:clamp(24px,6vw,48px);justify-content:center;align-items:flex-start;min-height:74px;transition:opacity .16s ease;}
+  .fig{display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .fig .v{font-family:var(--mono);font-size:clamp(33px,8vw,50px);font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .fig .l{font-size:13px;color:var(--slate);margin-top:7px;max-width:15ch;line-height:1.3;}
+  .chartwrap{width:100%;}
+  svg.chart{width:100%;height:auto;display:block;overflow:visible;}
+
+  .caps{position:relative;}
+  .cap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
+  .cap.is-on{opacity:1;pointer-events:auto;position:relative;}
+  .cap .idx{font-family:var(--mono);margin:0 0 10px;}
+  .cap .idx .n{font-size:19px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .cap .idx .t{font-size:16px;font-weight:600;color:var(--slate);}
+  .cap .txt{font-size:clamp(17px,2.5vw,20px);line-height:1.34;letter-spacing:-.005em;color:var(--ink);margin:0;}
+  .cap .txt b{font-weight:700;}
+  .cap .txt b.q{color:var(--emerald);}
+
+  .nav{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;}
+  .btn{font-family:var(--font);font-size:15px;font-weight:600;color:var(--emerald-dark);background:none;border:1px solid var(--hair);border-radius:999px;padding:9px 17px;cursor:pointer;transition:border-color .15s ease;}
+  .btn:hover:not(:disabled){border-color:var(--emerald);}
+  .btn:disabled{opacity:.3;cursor:default;}
+  .dots{display:flex;gap:9px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--gray);border:none;padding:0;cursor:pointer;opacity:.45;transition:opacity .2s ease,transform .2s ease,background .2s ease;}
+  .dot.is-on{background:var(--emerald);opacity:1;transform:scale(1.18);}
+
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:10px;padding-top:13px;border-top:1px solid var(--hair);font-size:12px;color:var(--slate);}
+  .foot .src{max-width:64%;line-height:1.3;}
+  .foot .me{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--slate);border:none;}
+  .foot .me svg{width:14px;height:14px;display:block;fill:currentColor;}
+
+  .sources-section{width:100%;max-width:var(--stageW);margin:0 auto;padding:32px 24px 64px;border-top:1px solid var(--hair);}
+  .sources-section h2{font-size:clamp(20px,3vw,25px);line-height:1.16;letter-spacing:-.01em;margin:0 0 8px;font-weight:700;}
+  .method-note{font-size:14px;line-height:1.6;color:var(--slate);margin:0 0 18px;}
+  .sources{font-size:15px;color:#31342A;list-style:none;padding:0;margin:0;}
+  .sources li{padding:11px 0;border-top:1px solid var(--hair);}
+  .sources li b{font-weight:600;}
+  .sources .meta{color:var(--slate);font-size:13.5px;}
+
+  @media (min-width:900px){
+    .stage{max-width:1120px;min-height:auto;display:block;padding:clamp(34px,5vh,58px) 36px;}
+    .mast h1{font-size:clamp(44px,5.2vw,60px);text-wrap:wrap;}
+    .mast .standfirst{font-size:clamp(19px,1.5vw,22px);max-width:none;}
+    .mast .pubdates{font-size:14px;margin-top:13px;}
+    .frame{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:18px;padding:30px 38px 24px;margin:16px 0 4px;}
+    .body{display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(34px,4vw,60px);align-items:center;padding:0;}
+    .viz{gap:12px;}
+    .cap .idx{margin-bottom:14px;}
+    .cap .idx .n{font-size:21px;} .cap .idx .t{font-size:17px;}
+    .cap .txt{font-size:clamp(19px,1.4vw,23px);line-height:1.46;}
+    .nav{justify-content:center;gap:clamp(20px,3vw,40px);border-top:1px solid var(--hair);margin-top:22px;padding-top:18px;}
+    .foot{margin-top:18px;}
+    .sources-section{max-width:1120px;padding-left:36px;padding-right:36px;}
+    .sources-section h2,.method-note,.sources{max-width:760px;}
+  }
+  @media (max-width:560px){
+    body{font-size:17px;}
+    .stage{padding:clamp(18px,2.6vh,26px) 18px;}
+    .figs{gap:20px;}
+    .sources-section{padding-left:18px;padding-right:18px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .figs,.cap,.dot{transition:none;}
+  }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+<!-- inject:header -->
+
+<main class="stage" id="stage" aria-label="Why doubling an agent's steps quadruples its bill">
+
+  <header class="mast">
+    <h1>Why doubling an agent's steps <span class="lk">quadruples</span> its bill</h1>
+    <p class="standfirst">An AI agent re-sends its whole history to the model on every step. So, it pays to re-read its own past far more often than it pays to think. If you count the steps in a task you will still underestimate the bill, because the cost is hiding in something the step count does not show.</p>
+    <p class="pubdates"><span>Published <time datetime="2026-07-01">July 1, 2026</time></span><span class="sep">&middot;</span><span>Updated <time datetime="2026-07-01">July 1, 2026</time></span></p>
+  </header>
+
+  <div class="frame">
+  <div class="body">
+    <section class="viz">
+      <div class="figs" id="figs"></div>
+      <div class="chartwrap">
+        <svg class="chart" id="chart" viewBox="0 0 760 430" role="img" aria-label="A curve of tokens billed against the number of steps in one agent task. The running total does not rise in a straight line, it curves upward and reaches about 840,000 tokens at 20 steps. The area under it splits into a thin band of new work along the bottom and a large band above it for the history the agent re-reads on every step, which is about nine-tenths of the total. A straight line for a task that never re-read shows the gap growing with the square of the steps, so ten steps cost about 220,000 tokens and twenty cost about 840,000. Turning on reuse and a step cap bends the curve back down toward the straight line, near 200,000 tokens.">
+          <g id="dyn"></g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="caps" id="caps" aria-live="polite">
+      <article class="cap" data-i="0">
+        <p class="idx"><span class="n">01</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>A 20-step agent burns about 840,000 tokens, and the reason is that every step re-sends all the steps before it.</b> Step 1 sends about one page of context, step 2 sends two, step 10 sends ten, so by step 20 the agent is paying to re-read a stack twenty pages deep. Add up all twenty of those growing reads and you get roughly 840,000 tokens, about ten times the 80,000 you would expect if each step cost the same. So the running total does not climb in a straight line, but rather curves upward and keeps growing.</p>
+      </article>
+      <article class="cap" data-i="1">
+        <p class="idx"><span class="n">02</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>About nine-tenths of that bill is the agent re-reading its own past, not doing new work.</b> If you split the area under the curve, the sliver along the bottom is the new work each step adds, a steady amount every time. Everything above it is the history the agent re-sends to the model on every single step. So most of what you pay for is the model reading the same tokens again and again. This is why input tokens primarily drive an agent's cost.</p>
+      </article>
+      <article class="cap" data-i="2">
+        <p class="idx"><span class="n">03</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>The history re-sent grows by one step each turn, so the total grows with the square of the steps, and doubling the steps roughly quadruples the bill.</b> If you lay a straight line under the curve for a task that never re-read anything, the gap between the line and the curve is the re-reading. Ten steps cost about 220,000 tokens and twenty cost about 840,000, close to four times the cost for twice the work. The steps doubled and the bill quadrupled.</p>
+      </article>
+      <article class="cap" data-i="3">
+        <p class="idx"><span class="n">04</span><span class="t"> / 04</span></p>
+        <p class="txt"><b class="q">So, what is the solution?</b> You need to bend the curve back toward the straight line. But how? Well, cache the part of the history that does not change so the model is not charged full price to read it again, prune the context down to what the next step needs, and cap how many steps an agent may take before it checks in. I think the number to engineer is how much context each step re-reads and definitely not the price of a token.</p>
+      </article>
+    </section>
+  </div>
+
+  <nav class="nav" aria-label="Scene navigation">
+    <button class="btn prev" id="prev" type="button" aria-label="Previous scene">&lsaquo; Prev</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn next" id="next" type="button" aria-label="Next scene">Next &rsaquo;</button>
+  </nav>
+  </div>
+
+  <footer class="foot">
+    <!-- inject:footer -->
+    <span class="src">arXiv:2604.22750 &middot; Gartner, 2026 &middot; prompt caching, Anthropic</span>
+    <a class="me" href="https://www.linkedin.com/in/sjishan" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"></path></svg>
+      <span>linkedin.com/in/sjishan</span>
+    </a>
+  </footer>
+
+</main>
+
+<!--SUBSCRIBE-->
+<section class="sources-section" aria-label="Sources">
+  <h2>Sources and method</h2>
+  <p class="method-note">The chart is arithmetic. Each step adds a roughly constant chunk of new context, and the agent re-sends the running history to the model on every step, so the tokens processed by step 20 are 1 plus 2 plus 3 all the way to 20, which is close to the square of the steps divided by two. The token counts are illustrative on that assumption, chosen to sit in the range reported for real agentic tasks. Caching charges the unchanged part of the history at a fraction of the normal input price, so reuse and a step cap bend the curve back down toward the no-re-read line rather than removing the cost entirely.</p>
+  <ul class="sources">
+    <li><b>How Do AI Agents Spend Your Money? Analyzing and Predicting Token Consumption in Agentic Coding Tasks</b>, arXiv:2604.22750 (2026). <span class="meta">Input tokens rather than output drive an agent's cost, agentic tasks consume far more tokens than chat or code reasoning, and higher spend does not buy higher accuracy.</span> <a href="https://arxiv.org/abs/2604.22750" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>Gartner, Worldwide AI Spending to Grow 47% in 2026</b> (May 2026). <span class="meta">Model consumption rises through multistep processes, and a separate Gartner 2026 analysis puts agentic token use at 5 to 30 times a standard chatbot, with a single task running 10 to 20 model calls.</span> <a href="https://www.gartner.com/en/newsroom/press-releases/2026-05-19-gartner-forecasts-worldwide-ai-spending-to-grow-47-percent-in-2026" target="_blank" rel="noopener">gartner.com</a></li>
+    <li><b>Anthropic, prompt caching</b> (2025). <span class="meta">A cached prefix of the context is charged at roughly a tenth of the normal input price, which is what makes re-reading a stable history cheap enough to matter.</span> <a href="https://docs.claude.com/en/docs/build-with-claude/prompt-caching" target="_blank" rel="noopener">docs.claude.com</a></li>
+  </ul>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var C = {emerald:"#0C6A52", emeraldDark:"#08493A", foil:"#8C2240", ink:"#181A15", slate:"#6A6F64", grid:"#E3E6DF", gray:"#A7ABA1", axis:"#2A2D24", ref:"#C4C9BB", work:"#8A8F84"};
+  var SANS="'IBM Plex Sans',Arial,sans-serif", MONO="'IBM Plex Mono',monospace";
+
+  // ----- geometry (linear axes: tokens vs steps) -----
+  var VBW=760, VBH=430, PADL=78, PADR=112, PADT=30, PADB=54;
+  var pxL=PADL, pxR=VBW-PADR, pyT=PADT, pyB=VBH-PADB, PW=pxR-pxL, PH=pyB-pyT;
+  var NS=20, YMAX=900000;
+  function X(s){ return pxL+(s/NS)*PW; }
+  function Y(v){ return pyB-(v/YMAX)*PH; }
+  function T(s){ return 2000*s*(s+1); }   // actual cumulative tokens (re-reads history each step)
+  function L(s){ return 4000*s; }          // linear: a task that never re-reads
+  function curveV(s){ return T(s)*(1-P.fix) + L(s)*P.fix; } // shown curve, bends toward L as fix grows
+
+  var el=function(tag,a){ var e=document.createElementNS(SVGNS,tag),k; for(k in a){ if(a.hasOwnProperty(k)) e.setAttribute(k,a[k]); } return e; };
+  var dyn = document.getElementById('dyn');
+  if(!dyn) return;
+
+  // ----- animated params -----
+  var P={ prog:0, fix:0, fixV:0,
+          soloOp:0, bandOp:0, lineOp:0, markOp:0, saveOp:0, curveOp:0,
+          endHi:0, endLo:0, nRead:0, nWork:0, nRef:0, nLaw:0, nSave:0 };
+  var Tg={};
+
+  function topPath(fn){ var d="",s,up=P.prog; for(s=0;s<=up+1e-6;s+=0.25){ d+=(s===0?"M":"L")+X(s).toFixed(2)+","+Y(fn(s)).toFixed(2)+" "; } if(up<=0) d="M"+X(0).toFixed(2)+","+Y(fn(0)).toFixed(2); return d; }
+  function bandPath(topFn,botFn){ var d="",s,up=P.prog; if(up<=0.01) up=0.01;
+    for(s=0;s<=up+1e-6;s+=0.25){ d+=(s===0?"M":"L")+X(s).toFixed(2)+","+Y(topFn(s)).toFixed(2)+" "; }
+    for(s=up;s>=-1e-6;s-=0.25){ d+="L"+X(s).toFixed(2)+","+Y(botFn(s)).toFixed(2)+" "; }
+    return d+"Z"; }
+  var zero=function(){return 0;};
+
+  // ----- static scaffold -----
+  var gridG=el('g',{}), yv=[0,300000,600000,900000], i;
+  for(i=0;i<yv.length;i++){ gridG.appendChild(el('line',{x1:pxL,y1:Y(yv[i]),x2:pxR,y2:Y(yv[i]),stroke:C.grid,"stroke-width":1}));
+    var yl=el('text',{x:pxL-9,y:Y(yv[i])+4,fill:C.axis,"font-size":15,"text-anchor":"end","font-family":MONO}); yl.textContent=(yv[i]===0?"0":(yv[i]/1000)+"K"); gridG.appendChild(yl); }
+  var xs=[0,5,10,15,20];
+  for(i=0;i<xs.length;i++){ var xt=el('text',{x:X(xs[i]),y:pyB+24,fill:C.axis,"font-size":15,"text-anchor":"middle","font-family":MONO}); xt.textContent=xs[i]; gridG.appendChild(xt); }
+  gridG.appendChild(el('line',{x1:pxL,y1:pyB,x2:pxR,y2:pyB,stroke:C.ref,"stroke-width":1.5}));
+  gridG.appendChild(el('line',{x1:pxL,y1:pyT,x2:pxL,y2:pyB,stroke:C.ref,"stroke-width":1.5}));
+  var ylab=el('text',{x:pxL,y:pyT-11,fill:C.slate,"font-size":14.5,"font-weight":600,"text-anchor":"start","font-family":SANS}); ylab.textContent="tokens billed"; gridG.appendChild(ylab);
+  var xlab=el('text',{x:pxR,y:pyB+43,fill:C.slate,"font-size":14.5,"font-weight":600,"text-anchor":"end","font-family":SANS}); xlab.textContent="steps (model calls)"; gridG.appendChild(xlab);
+  dyn.appendChild(gridG);
+
+  // ----- dynamic marks -----
+  var areaFull  = el('path',{fill:C.foil,stroke:"none",opacity:0}); dyn.appendChild(areaFull);         // scene 1 single faint area
+  var areaWork  = el('path',{fill:C.work,stroke:"none",opacity:0}); dyn.appendChild(areaWork);         // new work sliver
+  var areaReread= el('path',{fill:C.foil,stroke:"none",opacity:0}); dyn.appendChild(areaReread);       // re-read band
+  var areaSave  = el('path',{fill:C.emerald,stroke:"none",opacity:0}); dyn.appendChild(areaSave);      // reclaimed (scene 4)
+  var lineL     = el('path',{fill:"none",stroke:C.slate,"stroke-width":2,"stroke-dasharray":"5 6",opacity:0}); dyn.appendChild(lineL);
+  var curve     = el('path',{fill:"none",stroke:C.foil,"stroke-width":4.4,"stroke-linecap":"round","stroke-linejoin":"round",opacity:0}); dyn.appendChild(curve);
+
+  function tlab(x,y,txt,fill,anchor,size,weight,fam){ var t=el('text',{x:x,y:y,fill:fill,"font-size":size,"font-weight":weight,"text-anchor":anchor,"font-family":fam,stroke:"#FFFFFF","stroke-width":4,"paint-order":"stroke","stroke-linejoin":"round",opacity:0}); t.textContent=txt; dyn.appendChild(t); return t; }
+  // scene labels
+  var lRead = tlab(X(9.5), Y(T(15)*0.62), "re-reading history", C.foil, "middle", 16, 700, SANS);
+  var lWork = tlab(X(13.6), Y(L(13.6))-9, "new work", C.work, "middle", 14.5, 600, SANS);
+  var lRef  = tlab(X(18.6), Y(L(18.6))-9, "if it never re-read", C.slate, "end", 14.5, 600, SANS);
+  var mark10dot = el('circle',{cx:X(10),cy:Y(T(10)),r:5,fill:C.foil,stroke:"#fff","stroke-width":2.5,opacity:0}); dyn.appendChild(mark10dot);
+  var mark10 = tlab(X(10)+9, Y(T(10))+2, "220K at 10 steps", C.foil, "start", 15, 700, MONO);
+  var lLaw  = tlab(X(6.2), Y(T(18)*0.86), "\u00d72 steps \u00b7 \u00d74 bill", C.foil, "start", 15.5, 700, SANS);
+  var lSave = tlab(X(9.2), Y(T(19)*0.9), "reclaimed by reuse", C.emeraldDark, "middle", 16, 700, SANS);
+  // endpoint labels
+  var endHiDot = el('circle',{cx:X(20),cy:Y(T(20)),r:5.5,fill:C.foil,stroke:"#fff","stroke-width":2.5,opacity:0}); dyn.appendChild(endHiDot);
+  var endHi = tlab(X(20)+9, Y(T(20))+5, "\u2248840K tokens", C.foil, "start", 16, 700, MONO);
+  var endLoDot = el('circle',{cx:X(20),cy:Y(200000),r:5.5,fill:C.emerald,stroke:"#fff","stroke-width":2.5,opacity:0}); dyn.appendChild(endLoDot);
+  var endLo = tlab(X(20)+9, Y(200000)+5, "\u2248200K tokens", C.emeraldDark, "start", 16, 700, MONO);
+
+  // ----- per-scene targets -----
+  function setTargets(s){
+    if(s===0){ Tg={prog:NS,fix:0,soloOp:0.09,bandOp:0,lineOp:0,markOp:0,saveOp:0,curveOp:1,endHi:1,endLo:0,nRead:0,nWork:0,nRef:0,nLaw:0,nSave:0}; }
+    else if(s===1){ Tg={prog:NS,fix:0,soloOp:0,bandOp:1,lineOp:0,markOp:0,saveOp:0,curveOp:1,endHi:1,endLo:0,nRead:1,nWork:1,nRef:0,nLaw:0,nSave:0}; }
+    else if(s===2){ Tg={prog:NS,fix:0,soloOp:0,bandOp:0.72,lineOp:1,markOp:1,saveOp:0,curveOp:1,endHi:1,endLo:0,nRead:0,nWork:0,nRef:1,nLaw:1,nSave:0}; }
+    else { Tg={prog:NS,fix:0.84,soloOp:0,bandOp:1,lineOp:1,markOp:0,saveOp:1,curveOp:1,endHi:0.4,endLo:1,nRead:0,nWork:0,nRef:1,nLaw:0,nSave:1}; }
+  }
+
+  function apply(){
+    areaFull.setAttribute("d",bandPath(curveV,zero)); areaFull.setAttribute("opacity",P.soloOp.toFixed(3));
+    areaWork.setAttribute("d",bandPath(L,zero)); areaWork.setAttribute("opacity",(0.24*P.bandOp).toFixed(3));
+    areaReread.setAttribute("d",bandPath(curveV,L)); areaReread.setAttribute("opacity",(0.17*P.bandOp).toFixed(3));
+    areaSave.setAttribute("d",bandPath(T,curveV)); areaSave.setAttribute("opacity",(0.16*P.saveOp).toFixed(3));
+    lineL.setAttribute("d",topPath(L)); lineL.setAttribute("opacity",P.lineOp.toFixed(3));
+    curve.setAttribute("d",topPath(curveV)); curve.setAttribute("opacity",P.curveOp.toFixed(3));
+
+    lRead.setAttribute("opacity",P.nRead.toFixed(3)); lWork.setAttribute("opacity",P.nWork.toFixed(3));
+    lRef.setAttribute("opacity",P.nRef.toFixed(3)); lLaw.setAttribute("opacity",P.nLaw.toFixed(3)); lSave.setAttribute("opacity",P.nSave.toFixed(3));
+    mark10dot.setAttribute("opacity",P.markOp.toFixed(3)); mark10.setAttribute("opacity",P.markOp.toFixed(3));
+
+    var cv20=Y(curveV(20));
+    endHiDot.setAttribute("cy",Y(T(20)).toFixed(2)); endHiDot.setAttribute("opacity",P.endHi.toFixed(3)); endHi.setAttribute("y",(Y(T(20))+5).toFixed(2)); endHi.setAttribute("opacity",P.endHi.toFixed(3));
+    endLoDot.setAttribute("cy",cv20.toFixed(2)); endLoDot.setAttribute("opacity",P.endLo.toFixed(3)); endLo.setAttribute("y",(cv20+5).toFixed(2)); endLo.setAttribute("opacity",P.endLo.toFixed(3));
+  }
+  function snap(){ for(var q in Tg) P[q]=Tg[q]; apply(); }
+  function ap(cur,tar,rate,dt){ return cur+(tar-cur)*Math.min(1,rate*dt); }
+  var kk=120, zeta=0.8, cc=2*Math.sqrt(kk)*zeta;   // spring for the scene-4 curve relax
+  var lastT=0, current=-1;
+  function frame(now){
+    if(!lastT)lastT=now; var dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    P.prog=ap(P.prog,Tg.prog,2.6,dt); if(P.prog>NS-0.04) P.prog=NS;   // ease-out grow-in, snap the last sliver
+    var f=(-kk*(P.fix-Tg.fix))-(cc*P.fixV); P.fixV+=f*dt; P.fix+=P.fixV*dt;   // spring relax
+    P.soloOp=ap(P.soloOp,Tg.soloOp,8,dt); P.bandOp=ap(P.bandOp,Tg.bandOp,7,dt);
+    P.lineOp=ap(P.lineOp,Tg.lineOp,8,dt); P.markOp=ap(P.markOp,Tg.markOp,9,dt);
+    P.saveOp=ap(P.saveOp,Tg.saveOp,7,dt); P.curveOp=ap(P.curveOp,Tg.curveOp,8,dt);
+    P.endHi=ap(P.endHi,Tg.endHi,8,dt); P.endLo=ap(P.endLo,Tg.endLo,8,dt);
+    P.nRead=ap(P.nRead,Tg.nRead,9,dt); P.nWork=ap(P.nWork,Tg.nWork,9,dt);
+    P.nRef=ap(P.nRef,Tg.nRef,9,dt); P.nLaw=ap(P.nLaw,Tg.nLaw,9,dt); P.nSave=ap(P.nSave,Tg.nSave,9,dt);
+    apply(); requestAnimationFrame(frame);
+  }
+  function setChart(s){ if(s===current) return; current=s; setTargets(s); if(reduce){ P.prog=NS; snap(); } }
+
+  // ----- scenes: chart state + the two figures above the chart -----
+  var scenes=[
+    { chart:0, figs:[{v:"840K",l:"tokens, one 20-step task",c:C.foil},{v:"80K",l:"if it tracked the steps",c:C.gray}] },
+    { chart:1, figs:[{v:"90%",l:"re-reading history",c:C.foil},{v:"10%",l:"new work",c:C.slate}] },
+    { chart:2, figs:[{v:"4\u00d7",l:"the bill",c:C.foil},{v:"2\u00d7",l:"the steps",c:C.slate}] },
+    { chart:3, figs:[{v:"200K",l:"with reuse and a cap",c:C.emerald},{v:"840K",l:"left uncapped",c:C.foil}] }
+  ];
+  var N=scenes.length;
+  var figsEl=document.getElementById('figs'), dotsEl=document.getElementById('dots');
+  var prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+  var caps=[].slice.call(document.querySelectorAll('.cap'));
+  var stageEl=document.getElementById('stage');
+
+  function figsHTML(i){ var ff=scenes[i].figs, o=""; for(var j=0;j<ff.length;j++){ o+='<div class="fig"><span class="v" style="color:'+ff[j].c+'">'+ff[j].v+'</span><span class="l">'+ff[j].l+'</span></div>'; } return o; }
+
+  var dots=[];
+  for(i=0;i<N;i++){ (function(kx){ var bnt=document.createElement('button'); bnt.type='button'; bnt.className='dot'; bnt.setAttribute('aria-label','Go to scene '+(kx+1)); bnt.addEventListener('click',function(){ show(kx); }); dotsEl.appendChild(bnt); dots.push(bnt); })(i); }
+
+  var idx=0, swapT=null;
+  function show(i){
+    i=Math.max(0,Math.min(N-1,i)); idx=i;
+    setChart(scenes[idx].chart);
+    for(var q=0;q<dots.length;q++){ dots[q].classList.toggle('is-on',q===idx); }
+    prevBtn.disabled=(idx===0); nextBtn.disabled=(idx===N-1);
+    if(reduce){
+      figsEl.innerHTML=figsHTML(idx);
+      for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+    } else {
+      figsEl.style.opacity=0;
+      if(swapT) clearTimeout(swapT);
+      swapT=setTimeout(function(){
+        figsEl.innerHTML=figsHTML(idx); figsEl.style.opacity=1;
+        for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+      },160);
+    }
+  }
+
+  prevBtn.addEventListener('click',function(){ show(idx-1); });
+  nextBtn.addEventListener('click',function(){ show(idx+1); });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'){ show(idx+1); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ show(idx-1); }
+  });
+  var sx=null;
+  stageEl.addEventListener('touchstart',function(e){ sx=e.touches[0].clientX; },{passive:true});
+  stageEl.addEventListener('touchend',function(e){ if(sx===null) return; var dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>40){ show(dx<0?idx+1:idx-1); } sx=null; },{passive:true});
+
+  // ----- init: static first frame, then run -----
+  setChart(scenes[0].chart);
+  if(reduce){ P.prog=NS; snap(); } else { apply(); requestAnimationFrame(frame); }
+  figsEl.innerHTML=figsHTML(0);
+  caps[0].classList.add('is-on');
+  dots[0].classList.add('is-on');
+  prevBtn.disabled=true; nextBtn.disabled=(N<=1);
+})();
+</script>
+<!--CHROME:FOOTER-->
+</body>
+</html>
