@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- inject:head -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why LLM context windows lose accuracy long before they fill</title>
+<meta name="description" content="Models pass the needle test at 99 percent, yet 10 of 12 lose half their accuracy by 32K tokens. Where the usable context window ends and how to measure yours.">
+<link rel="canonical" href="https://jishan.ca/visuals/llm-context-window-accuracy">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why LLM context windows lose accuracy long before they fill">
+<meta property="og:description" content="Models pass the needle test at 99 percent, yet 10 of 12 lose half their accuracy by 32K tokens. Where the usable window ends and how to measure yours.">
+<meta property="og:url" content="https://jishan.ca/visuals/llm-context-window-accuracy">
+<meta property="og:image" content="https://jishan.ca/visuals/llm-context-window-accuracy/poster.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1;
+    --hair:#E9ECE3;
+    --stageW:600px;
+    --font:"IBM Plex Sans",Arial,sans-serif;
+    --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;display:flex;flex-direction:column;align-items:center;}
+  a{color:var(--emerald-dark);text-decoration:none;border-bottom:1px solid rgba(12,106,82,.28);}
+  a:hover{border-bottom-color:var(--emerald);}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+
+  /* The frame: a portrait stage the reader steps through on mobile, a landscape two-column frame on desktop */
+  .stage{
+    width:100%; max-width:var(--stageW); margin:0 auto; min-height:100svh;
+    padding:clamp(20px,3.2vh,34px) 24px;
+    display:flex; flex-direction:column; font-variant-numeric:tabular-nums;
+  }
+
+  .mast{flex:0 0 auto;}
+  .mast h1{font-size:clamp(28px,6vw,44px);line-height:1.07;letter-spacing:-.02em;font-weight:700;margin:0 0 12px;text-wrap:wrap;}
+  .mast h1 .lk{color:var(--foil);}
+  .mast .standfirst{font-size:clamp(16px,2.4vw,20px);line-height:1.45;color:#2A2D24;margin:0;max-width:46ch;}
+  .mast .pubdates{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:11px 0 24px;font-size:13px;color:var(--slate);}
+  .mast .pubdates time{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .mast .pubdates .sep{color:var(--gray);}
+
+  /* viz + caption share the middle, with balanced vertical rhythm */
+  .frame{display:contents;}
+  .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;align-items:stretch;min-height:0;padding:8px 0;}
+  .viz{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;}
+  .figs{display:flex;gap:clamp(24px,6vw,48px);justify-content:center;align-items:flex-start;min-height:74px;transition:opacity .16s ease;}
+  .fig{display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .fig .v{font-family:var(--mono);font-size:clamp(33px,8vw,50px);font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .fig .l{font-size:13px;color:var(--slate);margin-top:7px;max-width:16ch;line-height:1.3;}
+  .chartwrap{width:100%;}
+  svg.chart{width:100%;height:auto;display:block;overflow:visible;}
+
+  .caps{position:relative;}
+  .cap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
+  .cap.is-on{opacity:1;pointer-events:auto;position:relative;}
+  .cap .idx{font-family:var(--mono);margin:0 0 10px;}
+  .cap .idx .n{font-size:19px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .cap .idx .t{font-size:16px;font-weight:600;color:var(--slate);}
+  .cap .txt{font-size:clamp(17px,2.5vw,20px);line-height:1.34;letter-spacing:-.005em;color:var(--ink);margin:0;}
+  .cap .txt b{font-weight:700;}
+  .cap .txt b.q{color:var(--emerald);}
+
+  /* navigation controls */
+  .nav{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;}
+  .btn{font-family:var(--font);font-size:15px;font-weight:600;color:var(--emerald-dark);background:none;border:1px solid var(--hair);border-radius:999px;padding:9px 17px;cursor:pointer;transition:border-color .15s ease;}
+  .btn:hover:not(:disabled){border-color:var(--emerald);}
+  .btn:disabled{opacity:.3;cursor:default;}
+  .dots{display:flex;gap:9px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--gray);border:none;padding:0;cursor:pointer;opacity:.45;transition:opacity .2s ease,transform .2s ease,background .2s ease;}
+  .dot.is-on{background:var(--emerald);opacity:1;transform:scale(1.18);}
+
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:10px;padding-top:13px;border-top:1px solid var(--hair);font-size:12px;color:var(--slate);}
+  .foot .src{max-width:64%;line-height:1.3;}
+  .foot .me{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--slate);border:none;}
+  .foot .me svg{width:14px;height:14px;display:block;fill:currentColor;}
+
+  /* sources for credibility + search, below the frame */
+  .sources-section{width:100%;max-width:var(--stageW);margin:0 auto;padding:32px 24px 64px;border-top:1px solid var(--hair);}
+  .sources-section h2{font-size:clamp(20px,3vw,25px);line-height:1.16;letter-spacing:-.01em;margin:0 0 8px;font-weight:700;}
+  .method-note{font-size:14px;line-height:1.6;color:var(--slate);margin:0 0 18px;}
+  .sources{font-size:15px;color:#31342A;list-style:none;padding:0;margin:0;}
+  .sources li{padding:11px 0;border-top:1px solid var(--hair);}
+  .sources li b{font-weight:600;}
+  .sources .meta{color:var(--slate);font-size:13.5px;}
+
+  @media (min-width:900px){
+    .stage{max-width:1120px;min-height:auto;display:block;padding:clamp(34px,5vh,58px) 36px;}
+    .mast h1{font-size:clamp(44px,5.2vw,60px);}
+    .mast .standfirst{font-size:clamp(19px,1.5vw,22px);max-width:none;}
+    .mast .pubdates{font-size:14px;margin-top:13px;}
+    .frame{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:18px;padding:30px 38px 24px;margin:16px 0 4px;}
+    .body{display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(34px,4vw,60px);align-items:center;padding:0;}
+    .viz{gap:12px;}
+    .cap .idx{margin-bottom:14px;}
+    .cap .idx .n{font-size:21px;} .cap .idx .t{font-size:17px;}
+    .cap .txt{font-size:clamp(19px,1.4vw,23px);line-height:1.46;}
+    .nav{justify-content:center;gap:clamp(20px,3vw,40px);border-top:1px solid var(--hair);margin-top:22px;padding-top:18px;}
+    .foot{margin-top:18px;}
+    .sources-section{max-width:1120px;padding:36px 36px 72px;}
+    .sources-section h2,.method-note,.sources{max-width:760px;}
+  }
+  @media (max-width:560px){
+    body{font-size:17px;}
+    .stage{padding:clamp(18px,2.6vh,26px) 18px;}
+    .figs{gap:20px;}
+    .sources-section{padding-left:18px;padding-right:18px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .figs,.cap,.dot{transition:none;}
+  }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+<!-- inject:header -->
+
+<main class="stage" id="stage" aria-label="Why LLM context windows lose accuracy long before they fill">
+
+  <header class="mast">
+    <h1>Why LLM context windows <span class="lk">lose accuracy</span> long before they fill</h1>
+    <p class="standfirst">Frontier models read a short document almost perfectly, so a 128K-token window looks dependable end to end. But ask the same questions in your own words, and it becomes clear the reliable part of that window is far shorter than the box advertises.</p>
+    <p class="pubdates"><span>Published <time datetime="2026-07-10">July 10, 2026</time></span><span class="sep">&middot;</span><span>Updated <time datetime="2026-07-12">July 12, 2026</time></span></p>
+  </header>
+
+  <div class="frame">
+  <div class="body">
+    <section class="viz">
+      <div class="figs" id="figs"></div>
+      <div class="chartwrap">
+        <svg class="chart" id="chart" viewBox="0 0 760 430" role="img" aria-label="One hundred dots, each one question about a document, green when the model answers it right. In the document own words on a short document, 99 of 100 are green. Asked in your own words with the document grown to about fifty pages, only 47 stay green and the rest flip to wrong. The dots then form twelve columns, one per model tested in 2025, each showing the share of its short-document score it keeps at fifty pages, ten below half and two above. The final scene draws the measurement itself, the same 100 questions at 2, 10, 25, 50, and 100 pages, a green line at the accuracy your task needs, columns passing then failing, a marker where your usable window ends, and a dashed empty column at the advertised 200 pages.">
+          <g id="dyn"></g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="caps" id="caps" aria-live="polite">
+      <article class="cap" data-i="0">
+        <p class="idx"><span class="n">01</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>Ask a model 100 questions about a short document, using the document's own words, and it answers 99 of them right.</b> This is the kind of demo you see in launch posts, and it makes the model look like it has truly read every page. But the catch is that each question repeats the document's exact wording, so the model can locate the answer the way Ctrl+F does in a document, i.e. it acts, to some extent, like direct text matching rather than understanding it.</p>
+      </article>
+      <article class="cap" data-i="1">
+        <p class="idx"><span class="n">02</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>Now ask those same 100 questions the way a person actually would i.e., in your own words, and grow the document to about fifty pages. The same model now gets only 47 right.</b> Basically, more than half of what it got a moment ago has flipped to wrong. Nothing about the questions got harder, it is just that there is simply more text to hold at once. What we can understand from this is a model spreads a fixed amount of attention across all of it, so the few sentences that carry each answer get a thinner and thinner slice.</p>
+      </article>
+      <article class="cap" data-i="2">
+        <p class="idx"><span class="n">03</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>This is not just one weak model. If you take the twelve models that advertised a 128K-token window in 2025 and give each the same fifty-page test then ten of the twelve keep less than half of their short-document score, and only two managed to stay above.</b> What about the newer models? Well they move the wall without removing it. Measurements from March 2026 find most current models reliably use about 50 to 65 percent of the window they advertise. So the fade is basically built into how these systems read long inputs.</p>
+      </article>
+      <article class="cap" data-i="3">
+        <p class="idx"><span class="n">04</span><span class="t"> / 04</span></p>
+        <p class="txt"><b class="q">So, what is the solution?</b> No spec sheet prints this number, so you measure it yourself. First decide how accurate your task needs the model to be, and draw that as a line. The green line here is set at 90 right out of 100. Then ask your questions again as the document grows, at 2 pages, then 10, 25, 50, and 100. Your usable window is the length where the score first falls below your line, which is between 10 and 25 pages in this example. Past that point you pay full price for every token and get less back, so keep each prompt inside the window you measured and pull in only the passages the task needs.</p>
+      </article>
+    </section>
+  </div>
+
+  <nav class="nav" aria-label="Scene navigation">
+    <button class="btn prev" id="prev" type="button" aria-label="Previous scene">&lsaquo; Prev</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn next" id="next" type="button" aria-label="Next scene">Next &rsaquo;</button>
+  </nav>
+  </div>
+
+  <footer class="foot">
+    <span class="src">NoLiMa, ICML 2025 &middot; Chroma Context Rot, 2025 &middot; RULER via Iternal, 2026</span>
+    <a class="me" href="https://www.linkedin.com/in/sjishan" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"></path></svg>
+      <span>linkedin.com/in/sjishan</span>
+    </a>
+  </footer>
+
+</main>
+
+<!-- inject:subscribe -->
+
+<!--SUBSCRIBE-->
+<section class="sources-section" aria-label="Sources">
+  <h2>Sources and method</h2>
+  <p class="method-note">Every number in the grid is a reported rate shown across 100 questions. The 99 is the exact-words demo score, and the 47 renders the typical model below-half result once questions are reworded and the document grows long. In the model chart, which of the twelve keep above or below half of their short-document score is the reported 2025 finding, while the exact height of each column is drawn to read, and March 2026 RULER measurements still find most current models using about 50 to 65 percent of their advertised window. The final staircase is a worked example of the measurement, its heights and its 90 line are illustrative, and the crossing for your task and your model has to come from your own test. Lengths use roughly 650 tokens a page, so 32K is about 50 pages and 128K about 200.</p>
+  <ul class="sources">
+    <li><b>NoLiMa: Long-Context Evaluation Beyond Literal Matching</b> (Modarressi et al., Adobe Research, ICML 2025). <span class="meta">Needle tests rebuilt without literal word overlap. 10 of 12 models claiming at least 128K fall below half their short-context score by 32K tokens.</span> <a href="https://arxiv.org/abs/2502.05167" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>Context Rot: How Increasing Input Tokens Impacts LLM Performance</b> (Hong, Troynikov, and Huber, Chroma, 2025). <span class="meta">18 frontier models including GPT-4.1, Claude Opus 4, and Gemini 2.5. Every model degrades as input grows, at every length increment tested.</span> <a href="https://research.trychroma.com" target="_blank" rel="noopener">research.trychroma.com</a></li>
+    <li><b>RULER effective-context measurements</b> (Iternal, March 2026, reported by TechJack Solutions). <span class="meta">Most current models reliably use about 50 to 65 percent of their advertised context window before retrieval accuracy degrades.</span> <a href="https://techjacksolutions.com/ai-tools/rankings/llm-benchmarks-that-matter/" target="_blank" rel="noopener">techjacksolutions.com</a></li>
+    <li><b>Same Task, More Tokens: the Impact of Input Length on the Reasoning Performance of Large Language Models</b> (Levy, Jacoby, and Goldberg, ACL 2024). <span class="meta">The same questions padded to different lengths. Average reasoning accuracy falls from 0.92 to 0.68 by 3,000 tokens.</span> <a href="https://aclanthology.org/2024.acl-long.818/" target="_blank" rel="noopener">aclanthology.org</a></li>
+    <li><b>Ramp, AI token spending benchmarks</b> (June 2026). <span class="meta">Nearly 1 in 5 Anthropic tokens processed in April 2026 ran long-context, billed at the full per-token rate.</span> <a href="https://ramp.com/blog/ai-token-cost-for-businesses" target="_blank" rel="noopener">ramp.com</a></li>
+  </ul>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var GREEN=[12,106,82], FOIL=[140,34,64], GRAY=[167,171,161], SLATE=[106,111,100];
+  var EMERALD="#0C6A52", EMDARK="#08493A", FOILH="#8C2240", SLATEH="#6A6F64", GRAYH="#A7ABA1", HAIR="#E3E6DF";
+  function rgb(a){return "rgb("+Math.round(a[0])+","+Math.round(a[1])+","+Math.round(a[2])+")";}
+  function el(tag,attrs){ var e=document.createElementNS(SVGNS,tag),k; for(k in attrs){ if(attrs.hasOwnProperty(k)) e.setAttribute(k,attrs[k]); } return e; }
+  function txt(attrs,s){ var t=el('text',attrs); t.textContent=s; return t; }
+  var HALO={stroke:"#FFFFFF","stroke-width":4,"paint-order":"stroke","stroke-linejoin":"round"};
+  function halo(a){ var k,o={}; for(k in a){o[k]=a[k];} for(k in HALO){o[k]=HALO[k];} return o; }
+  var SANS="'IBM Plex Sans',Arial,sans-serif", MONO="'IBM Plex Mono',monospace";
+
+  var dyn=document.getElementById('dyn'); if(!dyn) return;
+
+  // ================= the 100 questions =================
+  var N_D=100, GX0=245, GY0=50, P=30, R=11;
+  function gridX(i){ return GX0+(i%10)*P; }
+  function gridY(i){ return GY0+Math.floor(i/10)*P; }
+
+  // scene color sets (a dot = one question; green means answered right)
+  function colDemo(i){ return (i<99)?GREEN:FOIL; }                        // exact words, short doc: 99 right
+  function colOwn(i){ return (i<47)?GREEN:FOIL; }                         // own words, 50 pages: 47 right (52 former-green dots flip)
+
+  // ================= scene 3: the 12 model columns =================
+  var BX0=90, SLOT=580/12, BARW=26, BASE=340, SCALE=2.7;
+  var BARH=[28,31,34,36,38,40,42,44,45,47,58,66];                         // share of starting score kept; 10 below half, 2 above
+  function barCx(j){ return BX0+SLOT*(j+0.5); }
+
+  // ================= scene 4: the measurement, drawn as a worked example =================
+  var S4X0=90, S4SLOT=580/6, S4W=44, THR=90;
+  var H4=[98,93,85,72,58], PAGES=["2","10","25","50","100"];
+  function c4(j){ return S4X0+S4SLOT*(j+0.5); }
+
+  // ================= build =================
+  var ctxLab = txt({x:380,y:384,fill:SLATEH,"font-size":15,"font-weight":600,"text-anchor":"middle","font-family":SANS},"");
+  dyn.appendChild(ctxLab);
+
+  // bars + half line
+  var baseline = el('line',{x1:BX0,y1:BASE,x2:BX0+580,y2:BASE,stroke:"#C4C9BB","stroke-width":1.5,opacity:0}); dyn.appendChild(baseline);
+  var bars=[];
+  BARH.forEach(function(h,j){
+    var below = h<50;
+    var r=el('rect',{x:barCx(j)-BARW/2,y:BASE,width:BARW,height:0,rx:5,fill:below?FOILH:GRAYH,opacity:0});
+    dyn.appendChild(r);
+    bars.push({r:r,hT:0,h:0,v:0,op:0,opT:0,target:h});
+  });
+  var halfLine = el('line',{x1:BX0,y1:BASE-50*SCALE,x2:BX0+580,y2:BASE-50*SCALE,stroke:GRAYH,"stroke-width":1.4,"stroke-dasharray":"4 4",opacity:0}); dyn.appendChild(halfLine);
+  var halfLab = txt(halo({x:BX0+4,y:BASE-50*SCALE-8,fill:SLATEH,"font-size":15,"font-weight":600,"font-family":SANS}),"half of its starting score"); halfLab.setAttribute("opacity",0); dyn.appendChild(halfLab);
+  var grpLo = txt(halo({x:BX0+4,y:244,fill:FOILH,"font-size":16,"font-weight":700,"font-family":MONO}),"10 of 12"); grpLo.setAttribute("opacity",0); dyn.appendChild(grpLo);
+  var grpHi = txt(halo({x:BX0+580-2,y:150,fill:GRAYH,"font-size":16,"font-weight":700,"text-anchor":"end","font-family":MONO}),"2 of 12"); grpHi.setAttribute("opacity",0); dyn.appendChild(grpHi);
+
+  // length bar
+  var s4g = el('g',{opacity:0}); dyn.appendChild(s4g);
+  var bars4=[];
+  H4.forEach(function(h,j){
+    s4g.appendChild(el('rect',{x:c4(j)-S4W/2,y:BASE-100*SCALE,width:S4W,height:100*SCALE,rx:6,fill:HAIR,opacity:0.55}));
+    var pass = h>=THR;
+    var r=el('rect',{x:c4(j)-S4W/2,y:BASE,width:S4W,height:0,rx:6,fill:pass?EMERALD:FOILH,opacity:0.95});
+    s4g.appendChild(r);
+    var lab=txt(halo({x:c4(j),y:BASE-8,fill:pass?EMDARK:FOILH,"font-size":15,"font-weight":700,"text-anchor":"middle","font-family":MONO}),""+h);
+    s4g.appendChild(lab);
+    bars4.push({r:r,lab:lab,h:0,v:0,hT:0,dly:0,target:h});
+  });
+  s4g.appendChild(el('rect',{x:c4(5)-S4W/2,y:BASE-100*SCALE,width:S4W,height:100*SCALE,rx:6,fill:"none",stroke:GRAYH,"stroke-width":1.4,"stroke-dasharray":"5 5",opacity:0.8}));
+  s4g.appendChild(txt(halo({x:c4(5),y:60,fill:SLATEH,"font-size":15,"font-weight":600,"text-anchor":"middle","font-family":SANS}),"advertised, 200 pages"));
+  s4g.appendChild(el('line',{x1:S4X0,y1:BASE,x2:S4X0+580,y2:BASE,stroke:"#C4C9BB","stroke-width":1.5}));
+  PAGES.forEach(function(p,j){ s4g.appendChild(txt({x:c4(j),y:BASE+22,fill:"#2A2D24","font-size":15,"text-anchor":"middle","font-family":MONO},p)); });
+  s4g.appendChild(txt({x:c4(5),y:BASE+22,fill:"#2A2D24","font-size":15,"text-anchor":"middle","font-family":MONO},"200"));
+  s4g.appendChild(el('line',{x1:S4X0,y1:BASE-THR*SCALE,x2:S4X0+580,y2:BASE-THR*SCALE,stroke:EMERALD,"stroke-width":1.6,"stroke-dasharray":"6 5"}));
+  s4g.appendChild(txt(halo({x:S4X0+580-2,y:BASE-THR*SCALE-8,fill:EMERALD,"font-size":15,"font-weight":600,"text-anchor":"end","font-family":SANS}),"accuracy your task needs, here 90"));
+  var XCROSS=(c4(1)+c4(2))/2;
+  s4g.appendChild(el('line',{x1:XCROSS,y1:70,x2:XCROSS,y2:BASE,stroke:EMERALD,"stroke-width":2,"stroke-dasharray":"2 5"}));
+  s4g.appendChild(txt(halo({x:XCROSS,y:56,fill:EMDARK,"font-size":16,"font-weight":700,"text-anchor":"middle","font-family":SANS}),"your usable window ends here"));
+
+  // the dots, drawn last so they travel above everything
+  var dots=[];
+  for(var i=0;i<N_D;i++){
+    var c=el('circle',{cx:gridX(i),cy:gridY(i),r:R,fill:rgb(GREEN),opacity:0});
+    dyn.appendChild(c);
+    dots.push({el:c, x:gridX(i), y:gridY(i), op:0, col:colDemo(i).slice(),
+               txA:gridX(i), tyA:gridY(i), txB:gridX(i), tyB:gridY(i),
+               opA:0, opB:1, colA:colDemo(i), colB:colDemo(i), dPos:0, dCol:0});
+  }
+  function feedX(j,i){ return barCx(j)+(((i*13)%16)-8)*0.9; }
+  function feedY(j,i){ return (BASE-BARH[j]*SCALE)-10-((i*7)%22); }
+
+  // ================= scene state =================
+  var st={halfOp:0,halfOpT:0, s4Op:0,s4OpT:0, baseOp:0,baseOpT:0};
+  var current=-1, sceneT0=0;
+  function nowMs(){ return (window.performance?performance.now():Date.now()); }
+  function approach(cur,tar,rate,dt){ return cur+(tar-cur)*Math.min(1,rate*dt); }
+  function approach3(cur,tar,rate,dt){ cur[0]=approach(cur[0],tar[0],rate,dt); cur[1]=approach(cur[1],tar[1],rate,dt); cur[2]=approach(cur[2],tar[2],rate,dt); }
+
+  var CTX=[
+    "100 questions about a short document, asked in its own words",
+    "the same 100 questions, in your words, document grown to ~50 pages",
+    "share of its short-document score each model keeps at ~50 pages, 2025 tests",
+    "pages in the test document (a worked example, measure your own)"
+  ];
+
+  function setChart(s){
+    if(s===current) return;
+    current=s; sceneT0=nowMs();
+    dots.forEach(function(d,i){
+      d.txA=d.x; d.tyA=d.y; d.opA=d.op; d.colA=d.col.slice();
+      if(s===0){ d.txB=gridX(i); d.tyB=gridY(i); d.opB=1; d.colB=colDemo(i); d.dPos=i*6; d.dCol=0; d.colA=colDemo(i); }
+      else if(s===1){ d.txB=gridX(i); d.tyB=gridY(i); d.opB=1; d.colB=colOwn(i); d.dPos=0; d.dCol=300+((i>=47&&i<99)?(i-47)*11:0); }
+      else if(s===2){ var j=i%12; d.txB=feedX(j,i); d.tyB=feedY(j,i); d.opB=0; d.colB=d.colA; d.dPos=i*5; d.dCol=0; }
+      else { var q=i%5; d.txB=c4(q)+(((i*13)%16)-8)*1.2; d.tyB=BASE-H4[q]*SCALE-10-((i*7)%22); d.opB=0; d.colB=d.colA; d.dPos=i*4; d.dCol=0; }
+    });
+    bars.forEach(function(b,j){ b.hT=(s===2)?b.target:0; b.opT=(s===2)?1:0; b.dly=(s===2)?250+j*90:0; });
+    bars4.forEach(function(b,j){ b.hT=(s===3)?b.target:0; b.dly=(s===3)?250+j*110:0; });
+    st.halfOpT=(s===2)?1:0; st.baseOpT=(s===2)?1:0; st.s4OpT=(s===3)?1:0;
+    if(reduce){ snap(); applyAll(); }
+  }
+  function snap(){
+    dots.forEach(function(d){ d.x=d.txB; d.y=d.tyB; d.op=d.opB; d.col=d.colB.slice(); });
+    bars.forEach(function(b){ b.h=b.hT; b.v=0; b.op=b.opT; });
+    bars4.forEach(function(b){ b.h=b.hT; b.v=0; });
+    st.halfOp=st.halfOpT; st.baseOp=st.baseOpT; st.s4Op=st.s4OpT;
+  }
+  function applyAll(){
+    dots.forEach(function(d){
+      d.el.setAttribute("cx",d.x.toFixed(1)); d.el.setAttribute("cy",d.y.toFixed(1));
+      d.el.setAttribute("fill",rgb(d.col)); d.el.setAttribute("opacity",d.op.toFixed(3));
+    });
+    bars.forEach(function(b){
+      var px=Math.max(0,b.h)*SCALE;
+      b.r.setAttribute("y",(BASE-px).toFixed(1)); b.r.setAttribute("height",px.toFixed(1));
+      b.r.setAttribute("opacity",b.op.toFixed(3));
+    });
+    bars4.forEach(function(b){
+      var px=Math.max(0,b.h)*SCALE;
+      b.r.setAttribute("y",(BASE-px).toFixed(1)); b.r.setAttribute("height",px.toFixed(1));
+      b.lab.setAttribute("y",(BASE-px-8).toFixed(1));
+      b.lab.setAttribute("opacity",(px>20?1:0));
+    });
+    baseline.setAttribute("opacity",st.baseOp.toFixed(3));
+    halfLine.setAttribute("opacity",st.halfOp.toFixed(3)); halfLab.setAttribute("opacity",st.halfOp.toFixed(3));
+    grpLo.setAttribute("opacity",st.halfOp.toFixed(3)); grpHi.setAttribute("opacity",st.halfOp.toFixed(3));
+    s4g.setAttribute("opacity",st.s4Op.toFixed(3));
+  }
+  var lastT=0;
+  function frame(now){
+    if(!lastT) lastT=now; var dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    var elapsed=now-sceneT0;
+    dots.forEach(function(d){
+      var tp = (elapsed>=d.dPos);
+      d.x=approach(d.x, tp?d.txB:d.txA, 6.5, dt);
+      d.y=approach(d.y, tp?d.tyB:d.tyA, 6.5, dt);
+      d.op=approach(d.op, tp?d.opB:d.opA, 8, dt);
+      approach3(d.col, (elapsed>=d.dCol)?d.colB:d.colA, 8, dt);
+    });
+    var sp=170, zeta=0.82, c=2*Math.sqrt(sp)*zeta;
+    bars.forEach(function(b){
+      var rel=(elapsed>=(b.dly||0));
+      var hT=rel?b.hT:0, oT=rel?b.opT:0;
+      var f=(-sp*(b.h-hT))-(c*b.v); b.v+=f*dt; b.h+=b.v*dt;
+      b.op=approach(b.op,oT,8,dt);
+    });
+    bars4.forEach(function(b){
+      var rel=(elapsed>=(b.dly||0));
+      var hT=rel?b.hT:0;
+      var f=(-sp*(b.h-hT))-(c*b.v); b.v+=f*dt; b.h+=b.v*dt;
+    });
+    st.halfOp=approach(st.halfOp,st.halfOpT,4,dt);
+    st.baseOp=approach(st.baseOp,st.baseOpT,6,dt);
+    st.s4Op=approach(st.s4Op,st.s4OpT,5,dt);
+    applyAll(); requestAnimationFrame(frame);
+  }
+
+  // ================= scenes: the figures above the chart =================
+  var scenes=[
+    { figs:[{v:"99",l:"right in the document's words",c:GREEN},{v:"1",l:"missed",c:FOIL}] },
+    { figs:[{v:"47",l:"right in your words, 50 pages",c:GREEN},{v:"53",l:"flipped to wrong",c:FOIL}] },
+    { figs:[{v:"10 of 12",l:"keep under half",c:FOIL},{v:"2 of 12",l:"hold above half",c:GRAY}] },
+    { figs:[{v:"?",l:"your usable window",c:GREEN}] }
+  ];
+  var N=scenes.length;
+  var figsEl=document.getElementById('figs'), dotsEl=document.getElementById('dots');
+  var prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+  var caps=[].slice.call(document.querySelectorAll('.cap'));
+  var stageEl=document.getElementById('stage');
+
+  function figsHTML(i){ var f=scenes[i].figs, o=""; for(var j=0;j<f.length;j++){ o+='<div class="fig"><span class="v" style="color:'+rgb(f[j].c)+'">'+f[j].v+'</span><span class="l">'+f[j].l+'</span></div>'; } return o; }
+
+  var navDots=[];
+  for(var d=0;d<N;d++){ (function(k){ var b=document.createElement('button'); b.type='button'; b.className='dot'; b.setAttribute('aria-label','Go to scene '+(k+1)); b.addEventListener('click',function(){ show(k); }); dotsEl.appendChild(b); navDots.push(b); })(d); }
+
+  var idx=0, swapT=null;
+  function show(i){
+    i=Math.max(0,Math.min(N-1,i)); idx=i;
+    setChart(idx);
+    for(var k=0;k<navDots.length;k++){ navDots[k].classList.toggle('is-on',k===idx); }
+    prevBtn.disabled=(idx===0); nextBtn.disabled=(idx===N-1);
+    if(reduce){
+      figsEl.innerHTML=figsHTML(idx); ctxLab.textContent=CTX[idx];
+      for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+    } else {
+      figsEl.style.opacity=0;
+      if(swapT) clearTimeout(swapT);
+      swapT=setTimeout(function(){
+        figsEl.innerHTML=figsHTML(idx); figsEl.style.opacity=1; ctxLab.textContent=CTX[idx];
+        for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+      },160);
+    }
+  }
+
+  prevBtn.addEventListener('click',function(){ show(idx-1); });
+  nextBtn.addEventListener('click',function(){ show(idx+1); });
+  document.addEventListener('keydown',function(e){
+    if(e.target && (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')) return;
+    if(e.key==='ArrowRight'||e.key==='PageDown'){ show(idx+1); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ show(idx-1); }
+  });
+  var x0=null;
+  stageEl.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+  stageEl.addEventListener('touchend',function(e){ if(x0===null) return; var dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40){ show(dx<0?idx+1:idx-1); } x0=null; },{passive:true});
+
+  // ================= init: paint a first frame, then run =================
+  applyAll();
+  if(!reduce){ requestAnimationFrame(frame); }
+  figsEl.innerHTML=figsHTML(0);
+  ctxLab.textContent=CTX[0];
+  caps[0].classList.add('is-on');
+  navDots[0].classList.add('is-on');
+  setChart(0);
+  prevBtn.disabled=true; nextBtn.disabled=(N<=1);
+})();
+</script>
+<!-- inject:footer -->
+<!--CHROME:FOOTER-->
+</body>
+</html>
