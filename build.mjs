@@ -115,6 +115,13 @@ for(const p of pieces){
 // ---- assets passthrough ----
 if(existsSync(ASSETS)) cpSync(ASSETS, join(DIST, 'assets'), { recursive: true });
 
+// Icons that crawlers probe at the site root by convention (Google's /favicon.ico,
+// iOS /apple-touch-icon.png). Mirror them from assets/ to the dist root.
+for(const f of ['favicon.ico', 'apple-touch-icon.png']){
+  const src = join(ASSETS, f);
+  if(existsSync(src)) cpSync(src, join(DIST, f));
+}
+
 // ---- sitemap.xml ----
 const newest = pieces[0]?.updated || new Date().toISOString().slice(0, 10);
 const urls = [

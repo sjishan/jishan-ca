@@ -16,8 +16,13 @@
      If you verify by HTML tag instead, uncomment and paste your token:
 <meta name="google-site-verification" content="YOUR_TOKEN"> -->
 
-<!-- Favicon: inline pine-green rounded square with a white "J" monogram -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230C6A52'/><path d='M64 27 V58 a16 16 0 0 1 -32 0' fill='none' stroke='%23fff' stroke-width='13' stroke-linecap='round'/></svg>">
+<!-- Favicon: real files (Google/WhatsApp/Messenger require crawlable icons, not data: URIs).
+     pine-green rounded square with a white "J" monogram. -->
+<link rel="icon" href="/favicon.ico" sizes="48x48 32x32 16x16">
+<link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+<link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/assets/site.webmanifest">
 
 <style>
   /* smooth in-page anchor scrolling (e.g. About), disabled when the user prefers reduced motion */
