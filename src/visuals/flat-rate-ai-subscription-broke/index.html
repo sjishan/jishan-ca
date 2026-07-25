@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- inject:head -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why the flat $20 AI subscription broke in 2026</title>
+<meta name="description" content="The top 10% of users on flat AI plans burn 70% of the tokens. How the $20 subscription broke in spring 2026, and the hybrid price that replaced it.">
+<link rel="canonical" href="https://jishan.ca/visuals/flat-rate-ai-subscription-broke">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why the flat $20 AI subscription broke in 2026">
+<meta property="og:description" content="The top 10% of users burn 70% of the tokens, and every one pays the same $20. The spring 2026 repricing, on one chart.">
+<meta property="og:url" content="https://jishan.ca/visuals/flat-rate-ai-subscription-broke">
+<meta property="og:image" content="https://jishan.ca/visuals/flat-rate-ai-subscription-broke/poster.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1;
+    --hair:#E9ECE3;
+    --stageW:600px;
+    --font:"IBM Plex Sans",Arial,sans-serif;
+    --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;display:flex;flex-direction:column;align-items:center;}
+  a{color:var(--emerald-dark);text-decoration:none;border-bottom:1px solid rgba(12,106,82,.28);}
+  a:hover{border-bottom-color:var(--emerald);}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+
+  .stage{
+    width:100%; max-width:var(--stageW); margin:0 auto; min-height:100svh;
+    padding:clamp(20px,3.2vh,34px) 24px;
+    display:flex; flex-direction:column; font-variant-numeric:tabular-nums;
+  }
+
+  .mast{flex:0 0 auto;}
+  .mast h1{font-size:clamp(28px,6vw,44px);line-height:1.07;letter-spacing:-.02em;font-weight:700;margin:0 0 12px;text-wrap:balance;}
+  .mast h1 .lk{color:var(--foil);}
+  .mast .standfirst{font-size:clamp(16px,2.4vw,20px);line-height:1.45;color:#2A2D24;margin:0;max-width:46ch;}
+  .mast .pubdates{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:11px 0 24px;font-size:13px;color:var(--slate);}
+  .mast .pubdates time{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .mast .pubdates .sep{color:var(--gray);}
+
+  .frame{display:contents;}
+  .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;align-items:stretch;min-height:0;padding:8px 0;}
+  .viz{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;}
+  .figs{display:flex;gap:clamp(24px,6vw,48px);justify-content:center;align-items:flex-start;min-height:74px;transition:opacity .16s ease;}
+  .fig{display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .fig .v{font-family:var(--mono);font-size:clamp(33px,8vw,50px);font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .fig .l{font-size:13px;color:var(--slate);margin-top:7px;max-width:15ch;line-height:1.3;}
+  .chartwrap{width:100%;}
+  svg.chart{width:100%;height:auto;display:block;overflow:visible;}
+
+  .caps{position:relative;}
+  .cap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
+  .cap.is-on{opacity:1;pointer-events:auto;position:relative;}
+  .cap .idx{font-family:var(--mono);margin:0 0 10px;}
+  .cap .idx .n{font-size:19px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .cap .idx .t{font-size:16px;font-weight:600;color:var(--slate);}
+  .cap .txt{font-size:clamp(17px,2.5vw,20px);line-height:1.34;letter-spacing:-.005em;color:var(--ink);margin:0;}
+  .cap .txt b{font-weight:700;}
+  .cap .txt b.q{color:var(--emerald);}
+
+  .nav{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;}
+  .btn{font-family:var(--font);font-size:15px;font-weight:600;color:var(--emerald-dark);background:none;border:1px solid var(--hair);border-radius:999px;padding:9px 17px;cursor:pointer;transition:border-color .15s ease;}
+  .btn:hover:not(:disabled){border-color:var(--emerald);}
+  .btn:disabled{opacity:.3;cursor:default;}
+  .dots{display:flex;gap:9px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--gray);border:none;padding:0;cursor:pointer;opacity:.45;transition:opacity .2s ease,transform .2s ease,background .2s ease;}
+  .dot.is-on{background:var(--emerald);opacity:1;transform:scale(1.18);}
+
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:10px;padding-top:13px;border-top:1px solid var(--hair);font-size:12px;color:var(--slate);}
+  .foot .src{max-width:64%;line-height:1.3;}
+  .foot .me{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--slate);border:none;}
+  .foot .me svg{width:14px;height:14px;display:block;fill:currentColor;}
+
+  .sources-section{width:100%;max-width:var(--stageW);margin:0 auto;padding:32px 24px 64px;border-top:1px solid var(--hair);}
+  .sources-section h2{font-size:clamp(20px,3vw,25px);line-height:1.16;letter-spacing:-.01em;margin:0 0 8px;font-weight:700;}
+  .method-note{font-size:14px;line-height:1.6;color:var(--slate);margin:0 0 18px;}
+  .sources{font-size:15px;color:#31342A;list-style:none;padding:0;margin:0;}
+  .sources li{padding:11px 0;border-top:1px solid var(--hair);}
+  .sources li b{font-weight:600;}
+  .sources .meta{color:var(--slate);font-size:13.5px;}
+
+  @media (min-width:900px){
+    .stage{max-width:1120px;min-height:auto;display:block;padding:clamp(34px,5vh,58px) 36px;}
+    .mast h1{font-size:clamp(44px,5.2vw,60px);text-wrap:wrap;}
+    .mast .standfirst{font-size:clamp(19px,1.5vw,22px);max-width:none;}
+    .mast .pubdates{font-size:14px;margin-top:13px;}
+    .frame{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:18px;padding:30px 38px 24px;margin:16px 0 4px;}
+    .body{display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(34px,4vw,60px);align-items:center;padding:0;}
+    .viz{gap:12px;}
+    .cap .idx{margin-bottom:14px;}
+    .cap .idx .n{font-size:21px;} .cap .idx .t{font-size:17px;}
+    .cap .txt{font-size:clamp(19px,1.4vw,23px);line-height:1.46;}
+    .nav{justify-content:center;gap:clamp(20px,3vw,40px);border-top:1px solid var(--hair);margin-top:22px;padding-top:18px;}
+    .foot{margin-top:18px;}
+    .sources-section{max-width:1120px;padding:36px 36px 72px;}
+    .sources-section h2,.method-note,.sources{max-width:760px;}
+  }
+  @media (max-width:560px){
+    body{font-size:17px;}
+    .stage{padding:clamp(16px,2.2vh,22px) 18px;}
+    .figs{gap:20px;min-height:64px;}
+    .body{padding:4px 0;}
+    .cap .idx{margin-bottom:7px;}
+    .nav{padding-top:10px;}
+    .mast .pubdates{margin:9px 0 16px;}
+    .sources-section{padding-left:18px;padding-right:18px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .figs,.cap,.dot{transition:none;}
+  }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+<!-- inject:header -->
+
+<main class="stage" id="stage" aria-label="Why the flat $20 AI subscription broke in 2026">
+
+  <header class="mast">
+    <h1>Why the flat $20 AI subscription <span class="lk">broke</span> in 2026</h1>
+    <p class="standfirst">Every subscriber pays the same flat fee while the top 10% of users burn most of the tokens. Through the spring of 2026 that gap forced the biggest AI vendors to change the shape of the price itself.</p>
+    <p class="pubdates"><span>Published <time datetime="2026-07-16">July 16, 2026</time></span><span class="sep">&middot;</span><span>Updated <time datetime="2026-07-16">July 16, 2026</time></span></p>
+  </header>
+
+  <div class="frame">
+  <div class="body">
+    <section class="viz">
+      <div class="figs" id="figs"></div>
+      <div class="chartwrap">
+        <svg class="chart" id="chart" viewBox="0 0 760 430" role="img" aria-label="Users ranked lightest to heaviest against the cumulative share of the total. A straight line is what subscribers pay under one flat price. A curve well below it is what they burn, so the top 10% of users burn 70% of the tokens while paying 10% of the revenue. A dashed line shows the lighter chat-era curve. In the third scene the paying line bends down toward the burning curve as a base plus meter, lifting the top 10% from 10% of revenue to 42%.">
+          <g id="dyn"></g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="caps" id="caps" aria-live="polite">
+      <article class="cap" data-i="0">
+        <p class="idx"><span class="n">01</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>The top 10% of users on a flat AI plan burn 70% of the tokens and pay 10% of the revenue.</b> The straight line is what subscribers pay, and the curve far below it is what they actually burn. What you will notice is that by the 90% mark subscribers have put in 90 cents of every revenue dollar and burned only 30% of the tokens. So the shaded gap between the lines is the light users covering the heavy ones.</p>
+      </article>
+      <article class="cap" data-i="1">
+        <p class="idx"><span class="n">02</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>The plans were priced for a chat era, where the curve sat close enough to the line that one flat fee fit everybody.</b> That chat era is the solid curve, and the dashed line is the same curve once agents arrive. Basically that means agents drag the curve far below the line, because one agentic coding task burns about 1,000 times the tokens of a chat exchange. The agent re-reads its whole history at every step and loops whenever a step fails.</p>
+      </article>
+      <article class="cap" data-i="2">
+        <p class="idx"><span class="n">03</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>Agents pulled that curve back down, and within three weeks of April 2026 four of the biggest AI coding vendors broke the flat plan the same way.</b> OpenAI moved its coding agent to pay-as-you-go, Anthropic cut third-party agents off flat plans and pulled Claude Code from its $20 tier, GitHub froze Copilot Pro signups, and Cursor put frontier models behind a paid mode. So the paying line bends toward the burning curve, i.e. a flat base with a meter on top.</p>
+      </article>
+      <article class="cap" data-i="3">
+        <p class="idx"><span class="n">04</span><span class="t"> / 04</span></p>
+        <p class="txt"><b class="q">So, what is the solution?</b> Give the price the same shape as the usage. Your goal is to keep a flat base that covers the median user, and then start a meter where the heavy tail begins, around the 90th percentile. This way nine users in ten never meet a meter, and the consumption-heavy users go from paying 10% of the revenue to 42%. To put it simply, the number to engineer is the percentile where the meter should start.</p>
+      </article>
+    </section>
+  </div>
+
+  <nav class="nav" aria-label="Scene navigation">
+    <button class="btn prev" id="prev" type="button" aria-label="Previous scene">&lsaquo; Prev</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn next" id="next" type="button" aria-label="Next scene">Next &rsaquo;</button>
+  </nav>
+  </div>
+
+  <footer class="foot">
+    <span class="src">Growth Unhinged, State of B2B Monetization &middot; Microsoft Research and Stanford, arXiv 2604.22750 &middot; 2026</span>
+    <a class="me" href="https://www.linkedin.com/in/sjishan" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"></path></svg>
+      <span>linkedin.com/in/sjishan</span>
+    </a>
+  </footer>
+
+</main>
+
+<!-- inject:subscribe -->
+
+<!--SUBSCRIBE-->
+<section class="sources-section" aria-label="Sources">
+  <h2>Sources and method</h2>
+  <p class="method-note">The dated pricing moves and the concentration figure are as reported. Both curves are cumulative shares, so each runs from zero to the whole. The burning curve is a concentration fit set so the top 10% of users hold exactly 70% of consumption, which is the reported figure. The paying line follows from the pricing rule rather than from data. Under one flat price every subscriber pays the same, so the cumulative share of revenue is a straight line by definition. Under a base plus a meter, a user pays the base until usage passes an included budget set at the 90th percentile and pays for consumption beyond it, which works out to 42% of revenue from the top 10% of users. The chat-era curve is illustrative, drawn to show a lighter tail rather than a measured distribution, and it is marked as such in the frame.</p>
+  <ul class="sources">
+    <li><b>Kyle Poyar, Growth Unhinged, The State of B2B SaaS and AI Monetization</b> (2026). <span class="meta">Survey of 230+ software companies. The top 10% of power users drive 70%+ of token consumption. Hybrid pricing grew from 27% to 41% of companies in a year while pure per-seat fell from 21% to 15%. Consumption limits are aimed at the top 10%.</span> <a href="https://www.growthunhinged.com/p/the-state-of-b2b-monetization-in-2026" target="_blank" rel="noopener">growthunhinged.com</a></li>
+    <li><b>Bai et al., How Do AI Agents Spend Your Money?</b> (Microsoft Research and Stanford, 2026). <span class="meta">Agentic coding tasks consume about 1,000x the tokens of code chat, measured on SWE-bench Verified trajectories across eight frontier models, and the same task varies up to 30x across runs.</span> <a href="https://arxiv.org/abs/2604.22750" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>Vendor pricing moves, April 2026</b> (OpenAI, Anthropic, GitHub, Cursor announcements, as reported). <span class="meta">Codex moved to pay-as-you-go on April 3 and added a $100 tier on April 9. Anthropic cut third-party agents off flat plans on April 4 and pulled Claude Code from the $20 tier for new signups. GitHub froze Copilot Pro signups. Anthropic disclosed users drawing tens of thousands of dollars a month on the $200 plan.</span> <a href="https://www.pymnts.com/artificial-intelligence-2/2026/third-party-agents-lose-access-as-anthropic-tightens-claude-usage-rules/" target="_blank" rel="noopener">pymnts.com</a></li>
+  </ul>
+</section>
+
+<!-- inject:footer -->
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var C = {emerald:[12,106,82], emeraldDark:[8,73,58], foil:[140,34,64], ink:[24,26,21], slate:[106,111,100], grid:[227,230,223], gray:[167,171,161]};
+  function rgb(a){return "rgb("+Math.round(a[0])+","+Math.round(a[1])+","+Math.round(a[2])+")";}
+  function mixc(a,b,m){return [a[0]+(b[0]-a[0])*m,a[1]+(b[1]-a[1])*m,a[2]+(b[2]-a[2])*m];}
+
+  /* ---- geometry: x = share of users (lightest to heaviest), y = cumulative share of the total ---- */
+  var VBW=760, VBH=430, PADL=62, PADR=54, PADT=26, PADB=52;
+  var pxL=PADL, pxR=VBW-PADR, pyT=PADT, pyB=VBH-PADB, PW=pxR-pxL, PH=pyB-pyT;
+  var PC=0.90;
+  function X(u){return pxL+u*PW;}
+  function Y(v){return pyB-v*PH;}
+
+  /* concentration curves. agent era fitted so the top 10% hold 70% of consumption */
+  var A=1-0.845098, AG=1-0.30;
+  function tokensAt(u){ return 1-Math.pow(1-u,A); }
+  function chatAt(u){ return 1-Math.pow(1-u,AG); }
+  function target(u,era){ return tokensAt(u)+(chatAt(u)-tokensAt(u))*era; }
+  function burnAt(u,bow,era){ return u+(target(u,era)-u)*bow; }   /* bow 0 = the straight line; era 0 = with agents, 1 = the chat era */
+  /* base + meter: pay the base until usage passes the budget at p90, then pay for what you burn */
+  var KA=1/7, TOT=0.9+KA*Math.pow(0.1,A)/A;
+  function revMeter(u){ return u<=PC ? u/TOT : (0.9+KA*(Math.pow(0.1,A)-Math.pow(1-u,A))/A)/TOT; }
+  function revAt(u,bend){ return u+(revMeter(u)-u)*bend; }
+
+  function pathOf(fn){ var d="",u; for(u=0;u<=1.0001;u+=0.002){ var uu=Math.min(u,1); d+=(u===0?"M":"L")+X(uu).toFixed(2)+","+Y(fn(uu)).toFixed(2)+" "; } return d.trim(); }
+  function lensSeg(bend,bow,era,a,b){ var d="",u; for(u=a;u<=b+1e-9;u+=0.002){ var uu=Math.min(u,b); d+=(u===a?"M":"L")+X(uu).toFixed(2)+","+Y(revAt(uu,bend)).toFixed(2)+" "; } for(u=b;u>=a-1e-9;u-=0.002){ var vv=Math.max(u,a); d+="L"+X(vv).toFixed(2)+","+Y(burnAt(vv,bow,era)).toFixed(2)+" "; } return d+"Z"; }
+  function lensOf(bend,bow,era){ var d="",u; for(u=0;u<=1.0001;u+=0.002){ var uu=Math.min(u,1); d+=(u===0?"M":"L")+X(uu).toFixed(2)+","+Y(revAt(uu,bend)).toFixed(2)+" "; } for(u=1;u>=-1e-9;u-=0.002){ var vv=Math.max(u,0); d+="L"+X(vv).toFixed(2)+","+Y(burnAt(vv,bow,era)).toFixed(2)+" "; } return d+"Z"; }
+  function el(t,a){ var e=document.createElementNS(SVGNS,t),k; for(k in a){ if(a.hasOwnProperty(k)) e.setAttribute(k,a[k]); } return e; }
+  function halo(x,y,s,fill,size,anchor){ var e=el('text',{x:x,y:y,fill:fill,"font-size":size,"font-weight":600,"text-anchor":anchor,stroke:"#FFFFFF","stroke-width":4,"paint-order":"stroke","stroke-linejoin":"round","font-family":"'IBM Plex Sans',Arial,sans-serif"}); e.textContent=s; return e; }
+
+  var dyn=document.getElementById('dyn'); if(!dyn) return;
+
+  /* ---- static scaffold ---- */
+  var i,g=el('g',{});
+  [0,0.5,1].forEach(function(v){
+    g.appendChild(el('line',{x1:pxL,y1:Y(v),x2:pxR,y2:Y(v),stroke:rgb(C.grid),"stroke-width":1}));
+    var t=el('text',{x:pxL-9,y:Y(v)+4,fill:"#2A2D24","font-size":16,"text-anchor":"end","font-family":"'IBM Plex Mono',monospace"}); t.textContent=Math.round(v*100)+"%"; g.appendChild(t);
+  });
+  [0.5,0.9,1].forEach(function(u){
+    var t=el('text',{x:X(u),y:pyB+24,fill:"#2A2D24","font-size":16,"text-anchor":"middle","font-family":"'IBM Plex Mono',monospace"}); t.textContent=Math.round(u*100)+"%"; g.appendChild(t);
+  });
+  g.appendChild(el('line',{x1:pxL,y1:Y(0),x2:pxR,y2:Y(0),stroke:"#C4C9BB","stroke-width":1.5}));
+  g.appendChild(el('line',{x1:pxL,y1:pyT,x2:pxL,y2:Y(0),stroke:"#C4C9BB","stroke-width":1.5}));
+  var yl=el('text',{x:pxL,y:pyT-10,fill:rgb(C.slate),"font-size":15,"font-weight":600,"font-family":"'IBM Plex Sans',Arial,sans-serif"}); yl.textContent="share of the total"; g.appendChild(yl);
+  var xl=el('text',{x:pxR,y:pyB+46,fill:rgb(C.slate),"font-size":15,"font-weight":600,"text-anchor":"end","font-family":"'IBM Plex Sans',Arial,sans-serif"}); xl.textContent="users, lightest to heaviest"; g.appendChild(xl);
+  dyn.appendChild(g);
+
+  /* ---- marks ---- */
+  var lens = el('path',{d:lensOf(0,1,0),fill:rgb(C.foil),stroke:"none",opacity:0}); dyn.appendChild(lens);
+  var lensL = el('path',{d:lensSeg(1,1,0,0,0.90),fill:rgb(C.emerald),stroke:"none",opacity:0}); dyn.appendChild(lensL);
+  var lensR = el('path',{d:lensSeg(1,1,0,0.90,1),fill:rgb(C.foil),stroke:"none",opacity:0}); dyn.appendChild(lensR);
+  var zoneLab = halo(X(0.40),Y(0.62),"9 in 10 users, one price",rgb(C.emeraldDark),15,"middle"); zoneLab.setAttribute('opacity',0); dyn.appendChild(zoneLab);
+  var lensLab = halo(X(0.62),Y(0.36),"the light 90% cover the rest",rgb(C.foil),15,"middle"); lensLab.setAttribute('opacity',0); dyn.appendChild(lensLab);
+
+  var p90 = el('line',{x1:X(PC),y1:pyT,x2:X(PC),y2:pyB,stroke:rgb(C.foil),"stroke-width":1.2,"stroke-dasharray":"4 4",opacity:0}); dyn.appendChild(p90);
+  var p90Lab = halo(X(PC)-8,pyT+16,"the top 10% of users",rgb(C.foil),15,"end"); p90Lab.setAttribute('opacity',0); dyn.appendChild(p90Lab);
+
+  var ghost = el('path',{d:pathOf(function(u){return tokensAt(u);}),fill:"none",stroke:rgb(C.gray),"stroke-width":2.6,"stroke-dasharray":"6 5","stroke-linecap":"round",opacity:0}); dyn.appendChild(ghost);
+  var ghostLab = halo(X(0.60),Y(tokensAt(0.60))+20,"with agents",rgb(C.slate),15,"start"); ghostLab.setAttribute('opacity',0); dyn.appendChild(ghostLab);
+  var chatLab = halo(X(0.42),Y(chatAt(0.42))+20,"the chat era, illustrative",rgb(C.slate),15,"start"); chatLab.setAttribute('opacity',0); dyn.appendChild(chatLab);
+
+  var burn = el('path',{d:pathOf(function(u){return burnAt(u,1,0);}),fill:"none",stroke:rgb(C.ink),"stroke-width":4,"stroke-linecap":"round",opacity:0}); dyn.appendChild(burn);
+  var burnLab = halo(X(0.72),Y(tokensAt(0.72))+24,"what they burn",rgb(C.ink),15,"start"); burnLab.setAttribute('opacity',0); dyn.appendChild(burnLab);
+
+  var rev = el('path',{d:pathOf(function(u){return revAt(u,0);}),fill:"none",stroke:rgb(C.foil),"stroke-width":4.5,"stroke-linecap":"round","stroke-linejoin":"round",opacity:0}); dyn.appendChild(rev);
+  var revLen=1; try{ revLen=rev.getTotalLength(); }catch(e){ revLen=700; }
+  var payFlat = halo(X(0.56),Y(0.56)-11,"what they pay, one flat price",rgb(C.foil),15,"end"); payFlat.setAttribute('opacity',0); dyn.appendChild(payFlat);
+  var payMeter = halo(X(0.56),Y(0.56)-11,"what they pay, base plus meter",rgb(C.emerald),15,"end"); payMeter.setAttribute('opacity',0); dyn.appendChild(payMeter);
+
+  var kink = el('circle',{cx:X(PC),cy:Y(revMeter(PC)),r:6,fill:rgb(C.emerald),stroke:"#FFFFFF","stroke-width":2.5,opacity:0}); dyn.appendChild(kink);
+  var kinkLab = halo(X(PC)-11,Y(revMeter(PC))-16,"the meter starts here",rgb(C.emeraldDark),15,"end"); kinkLab.setAttribute('opacity',0); dyn.appendChild(kinkLab);
+
+  /* ---- state ---- */
+  var S={ draw:0,drawT:0, bow:0,bowT:1,bowV:0, era:0,eraT:0,eraV:0, bend:0,bendT:0,bendV:0,
+          revOp:0,revOpT:0, burnOp:0,burnOpT:0, lensOp:0,lensOpT:0, lensLabOp:0,lensLabOpT:0,
+          ghostOp:0,ghostOpT:0, p90Op:0,p90OpT:0, payFOp:0,payFOpT:0, payMOp:0,payMOpT:0,
+          burnLabOp:0,burnLabOpT:0, chatLabOp:0,chatLabOpT:0, s4Op:0,s4OpT:0 };
+  var current=-1;
+  function ap(c,t,r,dt){ return c+(t-c)*Math.min(1,r*dt); }
+  function spr(p,v,t,sp,z,dt){ var c=2*Math.sqrt(sp)*z; var f=(-sp*(p-t))-(c*v); v+=f*dt; p+=v*dt; return [p,v]; }
+  function snap(){ S.draw=S.drawT;S.bow=S.bowT;S.bowV=0;S.era=S.eraT;S.eraV=0;S.bend=S.bendT;S.bendV=0;S.revOp=S.revOpT;S.burnOp=S.burnOpT;S.lensOp=S.lensOpT;S.lensLabOp=S.lensLabOpT;S.ghostOp=S.ghostOpT;S.p90Op=S.p90OpT;S.payFOp=S.payFOpT;S.payMOp=S.payMOpT;S.burnLabOp=S.burnLabOpT;S.chatLabOp=S.chatLabOpT;S.s4Op=S.s4OpT; }
+  function setChart(s){
+    if(s===current) return; current=s;
+    S.drawT=1; S.bowT=1; S.revOpT=1; S.burnOpT=1;
+    S.eraT=(s===1)?1:0;
+    S.ghostOpT=(s===1)?1:0;
+    S.burnLabOpT=(s===1)?0:1; S.chatLabOpT=(s===1)?1:0;
+    if(s===2 && !reduce){ S.bendT=0; setTimeout(function(){ if(current===2) S.bendT=1; },200); }
+    else { S.bendT=(s>=2)?1:0; }
+    S.lensOpT=(s===3)?0:0.22; S.lensLabOpT=(s===0)?1:0;
+    S.p90OpT=(s===0||s===3)?1:0;
+    S.payFOpT=(s<=1)?1:0; S.payMOpT=(s>=2)?1:0;
+    S.s4OpT=(s===3)?1:0;
+    if(reduce){ snap(); apply(); }
+  }
+  function apply(){
+    if(S.draw<0.999){ rev.setAttribute("stroke-dasharray",revLen); rev.setAttribute("stroke-dashoffset",revLen*(1-S.draw)); }
+    else { rev.removeAttribute("stroke-dasharray"); rev.removeAttribute("stroke-dashoffset"); }
+    burn.setAttribute("d",pathOf(function(u){return burnAt(u,S.bow,S.era);}));
+    burn.setAttribute("opacity",S.burnOp.toFixed(3));
+    burnLab.setAttribute("y",(Y(burnAt(0.72,S.bow,S.era))+24).toFixed(1));
+    burnLab.setAttribute("opacity",S.burnLabOp.toFixed(3));
+    ghost.setAttribute("opacity",S.ghostOp.toFixed(3));
+    ghostLab.setAttribute("opacity",S.ghostOp.toFixed(3));
+    chatLab.setAttribute("y",(Y(burnAt(0.42,S.bow,S.era))+20).toFixed(1));
+    chatLab.setAttribute("opacity",S.chatLabOp.toFixed(3));
+    rev.setAttribute("d",pathOf(function(u){return revAt(u,S.bend);}));
+    rev.setAttribute("stroke",rgb(mixc(C.foil,C.emerald,Math.max(0,Math.min(1,S.bend)))));
+    rev.setAttribute("opacity",S.revOp.toFixed(3));
+    lens.setAttribute("d",lensOf(S.bend,S.bow,S.era));
+    lens.setAttribute("opacity",S.lensOp.toFixed(3));
+    lensL.setAttribute("d",lensSeg(S.bend,S.bow,S.era,0,0.90)); lensL.setAttribute("opacity",(0.13*S.s4Op).toFixed(3));
+    lensR.setAttribute("d",lensSeg(S.bend,S.bow,S.era,0.90,1)); lensR.setAttribute("opacity",(0.22*S.s4Op).toFixed(3));
+    zoneLab.setAttribute("opacity",S.s4Op.toFixed(3));
+    lensLab.setAttribute("opacity",S.lensLabOp.toFixed(3));
+    p90.setAttribute("opacity",S.p90Op.toFixed(3));
+    p90Lab.setAttribute("opacity",S.p90Op.toFixed(3));
+    var py=Y(revAt(0.56,S.bend))-11;
+    payFlat.setAttribute("y",py.toFixed(1)); payFlat.setAttribute("opacity",S.payFOp.toFixed(3));
+    payMeter.setAttribute("y",py.toFixed(1)); payMeter.setAttribute("opacity",S.payMOp.toFixed(3));
+    kink.setAttribute("cy",Y(revAt(PC,S.bend)).toFixed(2)); kink.setAttribute("opacity",S.s4Op.toFixed(3));
+    kinkLab.setAttribute("y",(Y(revAt(PC,S.bend))-16).toFixed(1)); kinkLab.setAttribute("opacity",S.s4Op.toFixed(3));
+  }
+  var lastT=0;
+  function frame(now){
+    if(!lastT) lastT=now; var dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    S.draw=ap(S.draw,S.drawT,2.2,dt);
+    var b=spr(S.bow,S.bowV,S.bowT,20,0.88,dt); S.bow=b[0]; S.bowV=b[1];
+    var ee=spr(S.era,S.eraV,S.eraT,18,0.9,dt); S.era=ee[0]; S.eraV=ee[1];
+    var bb=spr(S.bend,S.bendV,S.bendT,20,0.88,dt); S.bend=bb[0]; S.bendV=bb[1];
+    S.revOp=ap(S.revOp,S.revOpT,8,dt); S.burnOp=ap(S.burnOp,S.burnOpT,8,dt);
+    S.lensOp=ap(S.lensOp,S.lensOpT,7,dt); S.lensLabOp=ap(S.lensLabOp,S.lensLabOpT,8,dt);
+    S.ghostOp=ap(S.ghostOp,S.ghostOpT,6,dt); S.p90Op=ap(S.p90Op,S.p90OpT,8,dt);
+    S.payFOp=ap(S.payFOp,S.payFOpT,9,dt); S.payMOp=ap(S.payMOp,S.payMOpT,9,dt);
+    S.burnLabOp=ap(S.burnLabOp,S.burnLabOpT,8,dt); S.chatLabOp=ap(S.chatLabOp,S.chatLabOpT,8,dt); S.s4Op=ap(S.s4Op,S.s4OpT,7,dt);
+    apply(); requestAnimationFrame(frame);
+  }
+
+  /* ---- scenes ---- */
+  var scenes=[
+    { figs:[{v:"70%",l:"of the tokens",c:C.foil},{v:"10%",l:"of the revenue",c:C.slate}] },
+    { figs:[{v:"1\u00d7",l:"a chat exchange",c:C.gray},{v:"1,000\u00d7",l:"one agentic task",c:C.foil}] },
+    { figs:[{v:"27%",l:"hybrid, spring 2025",c:C.gray},{v:"41%",l:"hybrid, spring 2026",c:C.emerald}] },
+    { figs:[{v:"10%",l:"top 10% pays, flat",c:C.gray},{v:"42%",l:"top 10% pays, metered",c:C.emerald}] }
+  ];
+  var N=scenes.length;
+  var figsEl=document.getElementById('figs'), dotsEl=document.getElementById('dots');
+  var prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+  var caps=[].slice.call(document.querySelectorAll('.cap'));
+  var stageEl=document.getElementById('stage');
+  function figsHTML(i){ var f=scenes[i].figs,o="",j; for(j=0;j<f.length;j++){ o+='<div class="fig"><span class="v" style="color:'+rgb(f[j].c)+'">'+f[j].v+'</span><span class="l">'+f[j].l+'</span></div>'; } return o; }
+  var dots=[];
+  for(i=0;i<N;i++){ (function(k){ var b=document.createElement('button'); b.type='button'; b.className='dot'; b.setAttribute('aria-label','Go to scene '+(k+1)); b.addEventListener('click',function(){ show(k); }); dotsEl.appendChild(b); dots.push(b); })(i); }
+  var idx=0, swapT=null;
+  function show(i){
+    i=Math.max(0,Math.min(N-1,i)); idx=i;
+    setChart(idx);
+    for(var k=0;k<dots.length;k++){ dots[k].classList.toggle('is-on',k===idx); }
+    prevBtn.disabled=(idx===0); nextBtn.disabled=(idx===N-1);
+    if(reduce){ figsEl.innerHTML=figsHTML(idx); for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); } }
+    else {
+      figsEl.style.opacity=0; if(swapT) clearTimeout(swapT);
+      swapT=setTimeout(function(){ figsEl.innerHTML=figsHTML(idx); figsEl.style.opacity=1; for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); } },160);
+    }
+  }
+  prevBtn.addEventListener('click',function(){ show(idx-1); });
+  nextBtn.addEventListener('click',function(){ show(idx+1); });
+  document.addEventListener('keydown',function(e){ if(e.key==='ArrowRight'||e.key==='PageDown'){ show(idx+1); } else if(e.key==='ArrowLeft'||e.key==='PageUp'){ show(idx-1); } });
+  var xs=null;
+  stageEl.addEventListener('touchstart',function(e){ xs=e.touches[0].clientX; },{passive:true});
+  stageEl.addEventListener('touchend',function(e){ if(xs===null) return; var dx=e.changedTouches[0].clientX-xs; if(Math.abs(dx)>40){ show(dx<0?idx+1:idx-1); } xs=null; },{passive:true});
+
+  if(reduce){ snap(); apply(); } else { S.bow=0; requestAnimationFrame(frame); }
+  figsEl.innerHTML=figsHTML(0);
+  caps[0].classList.add('is-on'); dots[0].classList.add('is-on');
+  setChart(0); prevBtn.disabled=true; nextBtn.disabled=(N<=1);
+})();
+</script>
+<!--CHROME:FOOTER-->
+</body>
+</html>
