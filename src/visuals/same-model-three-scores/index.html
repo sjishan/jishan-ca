@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why the same AI model gets three different scores</title>
+<meta name="description" content="Claude Opus 4.5 scored 45.9, 50.2, and 55.4 on the same benchmark, and only the harness changed. Why leaderboards partly rank the software wrapper around the model, and what to pay for first.">
+<link rel="canonical" href="https://jishan.ca/visuals/same-model-three-scores">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why the same AI model gets three different scores">
+<meta property="og:description" content="One model, three harnesses, a 9.5-point spread. The software wrapper moves benchmark scores more than most model upgrades do.">
+<meta property="og:url" content="https://jishan.ca/visuals/same-model-three-scores">
+<meta property="og:image" content="https://jishan.ca/visuals/same-model-three-scores/poster.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1;
+    --hair:#E9ECE3;
+    --stageW:600px;
+    --font:"IBM Plex Sans",Arial,sans-serif;
+    --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;display:flex;flex-direction:column;align-items:center;}
+  a{color:var(--emerald-dark);text-decoration:none;border-bottom:1px solid rgba(12,106,82,.28);}
+  a:hover{border-bottom-color:var(--emerald);}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+
+  .stage{
+    width:100%; max-width:var(--stageW); margin:0 auto; min-height:100svh;
+    padding:clamp(20px,3.2vh,34px) 24px;
+    display:flex; flex-direction:column; font-variant-numeric:tabular-nums;
+  }
+
+  .mast{flex:0 0 auto;}
+  .mast h1{font-size:clamp(28px,6vw,44px);line-height:1.07;letter-spacing:-.02em;font-weight:700;margin:0 0 12px;text-wrap:balance;}
+  .mast h1 .lk{color:var(--foil);}
+  .mast .standfirst{font-size:clamp(16px,2.4vw,20px);line-height:1.45;color:#2A2D24;margin:0;max-width:46ch;}
+  .mast .pubdates{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:11px 0 24px;font-size:13px;color:var(--slate);}
+  .mast .pubdates time{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .mast .pubdates .sep{color:var(--gray);}
+
+  .frame{display:contents;}
+  .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;align-items:stretch;min-height:0;padding:8px 0;}
+  .viz{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;}
+  .figs{display:flex;gap:clamp(24px,6vw,48px);justify-content:center;align-items:flex-start;min-height:74px;transition:opacity .16s ease;}
+  .fig{display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .fig .v{font-family:var(--mono);font-size:clamp(33px,8vw,50px);font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .fig .l{font-size:13px;color:var(--slate);margin-top:7px;max-width:16ch;line-height:1.3;}
+  .chartwrap{width:100%;}
+  canvas.chart{width:100%;height:auto;display:block;}
+
+  .caps{position:relative;}
+  .cap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
+  .cap.is-on{opacity:1;pointer-events:auto;position:relative;}
+  .cap .idx{font-family:var(--mono);margin:0 0 10px;}
+  .cap .idx .n{font-size:19px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .cap .idx .t{font-size:16px;font-weight:600;color:var(--slate);}
+  .cap .txt{font-size:clamp(17px,2.5vw,20px);line-height:1.34;letter-spacing:-.005em;color:var(--ink);margin:0;}
+  .cap .txt b{font-weight:700;}
+  .cap .txt b.q{color:var(--emerald);}
+
+  .nav{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;}
+  .btn{font-family:var(--font);font-size:15px;font-weight:600;color:var(--emerald-dark);background:none;border:1px solid var(--hair);border-radius:999px;padding:9px 17px;cursor:pointer;transition:border-color .15s ease;}
+  .btn:hover:not(:disabled){border-color:var(--emerald);}
+  .btn:disabled{opacity:.3;cursor:default;}
+  .dots{display:flex;gap:9px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--gray);border:none;padding:0;cursor:pointer;opacity:.45;transition:opacity .2s ease,transform .2s ease,background .2s ease;}
+  .dot.is-on{background:var(--emerald);opacity:1;transform:scale(1.18);}
+
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:10px;padding-top:13px;border-top:1px solid var(--hair);font-size:12px;color:var(--slate);}
+  .foot .src{max-width:64%;line-height:1.3;}
+  .foot .me{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--slate);border:none;}
+  .foot .me svg{width:14px;height:14px;display:block;fill:currentColor;}
+
+  .sources-section{width:100%;max-width:var(--stageW);margin:0 auto;padding:32px 24px 64px;border-top:1px solid var(--hair);}
+  .sources-section h2{font-size:clamp(20px,3vw,25px);line-height:1.16;letter-spacing:-.01em;margin:0 0 8px;font-weight:700;}
+  .method-note{font-size:14px;line-height:1.6;color:var(--slate);margin:0 0 18px;}
+  .sources{font-size:15px;color:#31342A;list-style:none;padding:0;margin:0;}
+  .sources li{padding:11px 0;border-top:1px solid var(--hair);}
+  .sources li b{font-weight:600;}
+  .sources .meta{color:var(--slate);font-size:13.5px;}
+
+  @media (min-width:900px){
+    .stage{max-width:1120px;min-height:auto;display:block;padding:clamp(34px,5vh,58px) 36px;}
+    .mast h1{font-size:clamp(44px,5.2vw,60px);text-wrap:wrap;}
+    .mast .standfirst{font-size:clamp(19px,1.5vw,22px);max-width:none;}
+    .mast .pubdates{font-size:14px;margin-top:13px;}
+    .frame{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:18px;padding:30px 38px 24px;margin:16px 0 4px;}
+    .body{display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(34px,4vw,60px);align-items:center;padding:0;}
+    .viz{gap:12px;}
+    .cap .idx{margin-bottom:14px;}
+    .cap .idx .n{font-size:21px;} .cap .idx .t{font-size:17px;}
+    .cap .txt{font-size:clamp(19px,1.4vw,23px);line-height:1.46;}
+    .nav{justify-content:center;gap:clamp(20px,3vw,40px);border-top:1px solid var(--hair);margin-top:22px;padding-top:18px;}
+    .foot{margin-top:18px;}
+    .sources-section{max-width:1120px;padding:36px 36px 72px;}
+    .sources-section h2,.method-note,.sources{max-width:760px;}
+  }
+  @media (max-width:560px){
+    body{font-size:17px;}
+    .stage{padding:clamp(18px,2.6vh,26px) 18px;}
+    .figs{gap:20px;}
+    .sources-section{padding-left:18px;padding-right:18px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .figs,.cap,.dot{transition:none;}
+  }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+
+<main class="stage" id="stage" aria-label="Why the same AI model gets three different scores">
+
+  <header class="mast">
+    <h1>Why the same AI model gets <span class="lk">three different scores</span></h1>
+    <p class="standfirst">Claude Opus 4.5 was tested with the same coding benchmark under three different harnesses and the scores were 45.9, 50.2, and 55.4, respectively. The harness is the software wrapper that sits between the model and the test, and it turns out that wrapper is worth more points than most model upgrades. So the leaderboard you are reading is partly a ranking of wrappers.</p>
+    <p class="pubdates"><span>Published <time datetime="2026-07-23">July 23, 2026</time></span><span class="sep">&middot;</span><span>Updated <time datetime="2026-08-03">August 3, 2026</time></span></p>
+  </header>
+
+  <div class="frame">
+  <div class="body">
+    <section class="viz">
+      <div class="figs" id="figs"></div>
+      <div class="chartwrap">
+        <canvas class="chart" id="cv" width="1520" height="920" role="img" aria-label="One model, Claude Opus 4.5, shown as three dots at 45.9, 50.2, and 55.4 percent on SWE-bench Pro, one dot per harness, with a 9.5-point bracket. A pipeline view then shows the model passing through a harness layer that controls what it sees, which tools it gets, retries, and stopping. Bars then show harness-only swings of 9.5, 11, 15, and up to 48 points against a shaded 2-to-4-point band for typical model advances. A final view compares the 10 to 20 points a better harness buys with the 2 to 4 points a model upgrade buys."></canvas>
+      </div>
+    </section>
+
+    <section class="caps" id="caps" aria-live="polite">
+      <article class="cap" data-i="0">
+        <p class="idx"><span class="n">01</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>The same AI model, Claude Opus 4.5, took the same benchmark and came back with three different scores: 45.9, 50.2, and 55.4.</b> Nothing about the model changed between those runs, and the test did not change either, because SWE-bench Pro is a fixed set of real software engineering tasks. The only thing that changed was the harness, i.e. the software wrapper that runs the model against the test. And that one change moved the score by 9.5 points, which is a bigger jump than most model upgrades deliver.</p>
+      </article>
+      <article class="cap" data-i="1">
+        <p class="idx"><span class="n">02</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>Basically, the model never takes the test alone.</b> A layer of software sits between the model and the task, and on every single step that layer makes four decisions: what the model gets to see, which tools it is allowed to call, whether a failed attempt gets retried, and when to declare the work finished. Every one of those decisions moves the final score. So a benchmark score is always produced by two things working together, the model and the harness, but the leaderboard shows only the model's name, which means majority of the harness's work gets silently credited to the model.</p>
+      </article>
+      <article class="cap" data-i="2">
+        <p class="idx"><span class="n">03</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>Across the industry, swapping the harness moves scores far more than the model improvements everyone argues about.</b> Holding the model fixed and changing only the harness shifts GPT-5 by 11 points and Kimi K2 by 15 points, and one leaderboard that ran the same models through many harnesses measured swings of up to 48 points. Meanwhile, when a paper announces a meaningful model improvement, it is usually announcing a gain of 2 to 4 points. So the item that nobody talks much about is routinely several times larger than the item everyone discusses.</p>
+      </article>
+      <article class="cap" data-i="3">
+        <p class="idx"><span class="n">04</span><span class="t"> / 04</span></p>
+        <p class="txt"><b class="q">So, what is the key takeaway?</b> It is that the harness is not a detail you can ignore, it is part of what the score is measuring. So when you are reading a leaderboard, treat two models as comparable only if the same harness ran both of them, because otherwise the ranking is partly a ranking of wrappers. On top of that, when you are building something real, look at your harness before you reach for a bigger model, because the wrapper is worth 10 to 20 points, a model upgrade is usually worth 2 to 4, and the wrapper is the part your team fully controls. Basically, before you pay for a smarter model, check whether you are wasting the one you already have.</p>
+      </article>
+    </section>
+  </div>
+
+  <nav class="nav" aria-label="Scene navigation">
+    <button class="btn prev" id="prev" type="button" aria-label="Previous scene">&lsaquo; Prev</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn next" id="next" type="button" aria-label="Next scene">Next &rsaquo;</button>
+  </nav>
+  </div>
+
+  <footer class="foot">
+    <span class="src">Opus 4.5: 45.9&ndash;55.4 by harness (arXiv 2605.23950; Digital Applied, Jun 2026) &middot; harness-only swings 11 / 15 / 48 pts &middot; model advances 2&ndash;4</span>
+    <a class="me" href="https://www.linkedin.com/in/sjishan" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"></path></svg>
+      <span>linkedin.com/in/sjishan</span>
+    </a>
+  </footer>
+
+</main>
+
+<!--SUBSCRIBE-->
+<section class="sources-section" aria-label="Sources">
+  <h2>Sources and method</h2>
+  <p class="method-note">Every score in this piece is a published number, not an estimate of mine. The three Opus 4.5 scores are the same model run on SWE-bench Pro by three different harnesses: Scale's standardized SEAL scaffold at 45.9, a third agent system at 50.2, and Claude Code at 55.4. The 11 and 15-point figures hold the model fixed and change only the harness, and the 48-point figure is the largest single-model swing the Holistic Agent Leaderboard measured across harnesses. The 2-to-4-point reference is the size of gain that agent papers typically report as a meaningful model advance, as characterized by the cited position paper, and the 10-to-20-point figure is Scale's own attribution of score movement to harness choices.</p>
+  <ul class="sources">
+    <li><b>Stop Comparing LLM Agents Without Disclosing the Harness</b> (arXiv, May 2026). <span class="meta">The position paper behind this piece: Opus 4.5 at 45.9 under SEAL versus 55.4 under Claude Code, harness-only shifts of 11 points for GPT-5 and 15 for Kimi K2, single-model swings up to 48 points on the Holistic Agent Leaderboard, and the observation that these dwarf the 2-to-4-point shifts papers report as meaningful advances.</span> <a href="https://arxiv.org/abs/2605.23950" target="_blank" rel="noopener">arxiv.org/abs/2605.23950</a></li>
+    <li><b>SWE-bench in 2026: Benchmarks vs Scaffolding Reality</b> (Digital Applied, June 16, 2026). <span class="meta">Three agent systems running the same Opus 4.5 span 50.2 to 55.4 on SWE-bench Pro, Scale's analysis attributes 10 to 20 points of movement to harness choices, and 99 of the 100 entries on the most-quoted Verified board are self-reported.</span> <a href="https://www.digitalapplied.com/blog/swe-bench-verified-june-2026-benchmark-vs-scaffolding-analysis" target="_blank" rel="noopener">digitalapplied.com</a></li>
+    <li><b>Orchard: harness lock-in in trained agents</b> (arXiv, 2026). <span class="meta">The extreme case: an open agent model scores 62.4 on its native harness and 3.6 on an unfamiliar one, a collapse of 58.8 points with identical weights.</span> <a href="https://arxiv.org/pdf/2605.15040" target="_blank" rel="noopener">arxiv.org/pdf/2605.15040</a></li>
+  </ul>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var P={emerald:"#0C6A52",emeraldDark:"#08493A",foil:"#8C2240",ink:"#181A15",slate:"#6A6F64",grid:"#E3E6DF",gray:"#A7ABA1"};
+  var MONO="'IBM Plex Mono', monospace", SANS="'IBM Plex Sans', Arial, sans-serif";
+
+  var cv=document.getElementById("cv"); if(!cv) return; var ctx=cv.getContext("2d");
+  var LOGW=760, LOGH=460, SS=2;
+  cv.width=LOGW*SS; cv.height=LOGH*SS; ctx.setTransform(SS,0,0,SS,0,0);
+  var W=LOGW, H=LOGH;
+
+  /* ---- layout S: the fan strip, a 40-60 window of the 0-100 scale ---- */
+  var S={x0:210, x1:690, yTop:66, yBot:314, rows:[116,196,276], tick:336, strip:404};
+  function sx(v){ return S.x0+(S.x1-S.x0)*((v-40)/20); }
+  var RUNS=[ {h:"run by Claude Code",            s:55.4, top:true},
+             {h:"run by a third agent system",   s:50.2},
+             {h:"run by Scale's SEAL scaffold",  s:45.9} ];
+
+  /* ---- layout W: harness-only swings vs the model-advance band ---- */
+  var Wl={x0:206, x1:690, yTop:66, yBot:310, rows:[104,164,224,284], tick:330};
+  function wx(v){ return Wl.x0+(Wl.x1-Wl.x0)*(v/50); }
+  var SWINGS=[ {n:"Opus 4.5", v:9.5, lbl:"9.5"},
+               {n:"GPT-5", v:11, lbl:"11"},
+               {n:"Kimi K2", v:15, lbl:"15"},
+               {n:"largest measured", v:48, lbl:"48"} ];
+
+  /* ---- layout D: what each purchase buys ---- */
+  var D={x0:96, x1:690, yTop:70, yBot:300, rows:[150,244], tick:322};
+  function dx(v){ return D.x0+(D.x1-D.x0)*(v/22); }
+
+  function halo(text,x,y,color,font,align,base){
+    ctx.save(); ctx.font=font; ctx.textAlign=align||"left"; ctx.textBaseline=base||"middle";
+    ctx.strokeStyle="#FFFFFF"; ctx.lineWidth=4; ctx.lineJoin="round"; ctx.strokeText(text,x,y);
+    ctx.fillStyle=color; ctx.fillText(text,x,y); ctx.restore();
+  }
+  function dotm(x,y,color,rad){ ctx.save(); ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,rad,0,6.2832); ctx.fill(); ctx.strokeStyle="#fff"; ctx.lineWidth=3; ctx.stroke(); ctx.restore(); }
+
+  function drawStripAxes(alpha){
+    ctx.save(); ctx.globalAlpha=alpha;
+    var ticks=[40,45,50,55,60];
+    ctx.strokeStyle=P.grid; ctx.lineWidth=1;
+    for(var i=0;i<ticks.length;i++){ var xx=sx(ticks[i]); ctx.beginPath(); ctx.moveTo(xx,S.yTop); ctx.lineTo(xx,S.yBot); ctx.stroke(); }
+    ctx.strokeStyle="#C4C9BB"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(S.x0,S.yBot); ctx.lineTo(S.x1,S.yBot); ctx.stroke();
+    ctx.font='600 16px '+MONO; ctx.fillStyle="#2A2D24"; ctx.textAlign="center"; ctx.textBaseline="top";
+    for(var j=0;j<ticks.length;j++){ ctx.fillText(ticks[j]+"",sx(ticks[j]),S.tick-10); }
+    ctx.font='600 15px '+SANS; ctx.fillStyle=P.slate; ctx.textAlign="right"; ctx.textBaseline="top";
+    ctx.fillText("Claude Opus 4.5's score on SWE-bench Pro (%)",S.x1,S.tick+14);
+    /* context bar: where the 40-60 window sits on the full 0-100 scale */
+    var s0=S.x0, s1=S.x1, sy=S.strip, sh=9;
+    ctx.fillStyle="#F1F3EC"; ctx.fillRect(s0,sy,s1-s0,sh);
+    ctx.strokeStyle=P.grid; ctx.strokeRect(s0,sy,s1-s0,sh);
+    var w0=s0+(s1-s0)*0.40, w1=s0+(s1-s0)*0.60;
+    ctx.fillStyle="rgba(12,106,82,.35)"; ctx.fillRect(w0,sy,w1-w0,sh);
+    ctx.strokeStyle=P.gray; ctx.lineWidth=1; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(w0,sy); ctx.lineTo(S.x0,S.yBot+24); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w1,sy); ctx.lineTo(S.x1,S.yBot+24); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font='600 12.5px '+SANS; ctx.fillStyle=P.slate;
+    ctx.textAlign="right"; ctx.textBaseline="middle"; ctx.fillText("0",s0-10,sy+sh/2);
+    ctx.textAlign="left"; ctx.fillText("100",s1+8,sy+sh/2);
+    ctx.fillText("the full 0 to 100 scale, with the 40\u201360 window shown above",s0,sy+sh+14);
+    ctx.restore();
+  }
+
+  function drawStrip(alpha, pipeK){
+    if(alpha<=0.01) return;
+    ctx.save(); ctx.globalAlpha=alpha;
+    drawStripAxes(1);
+
+    /* scene 1: the 9.5-point bracket over the fan */
+    var brK = 1 - pipeK;
+    if(brK>0.02){
+      ctx.save(); ctx.globalAlpha=alpha*brK;
+      var xa=sx(45.9), xb=sx(55.4), yk=S.yTop+12;
+      ctx.strokeStyle=P.foil; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(xa,yk); ctx.lineTo(xb,yk); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xa,yk-5); ctx.lineTo(xa,yk+5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xb,yk-5); ctx.lineTo(xb,yk+5); ctx.stroke();
+      halo("9.5 pts \u00b7 same model, different harness",(xa+xb)/2,yk-9,P.foil,'700 14px '+MONO,"center","bottom");
+      ctx.restore();
+    }
+
+    /* scene 2: the model node, the harness band, the connecting lines */
+    if(pipeK>0.02){
+      ctx.save(); ctx.globalAlpha=alpha*pipeK;
+      var mx=64, my=196;
+      var b0=104, b1=192;
+      ctx.fillStyle="rgba(106,111,100,.07)"; ctx.fillRect(b0,S.yTop,b1-b0,S.yBot-S.yTop);
+      ctx.strokeStyle=P.grid; ctx.setLineDash([3,4]); ctx.strokeRect(b0,S.yTop,b1-b0,S.yBot-S.yTop); ctx.setLineDash([]);
+      halo("the harness",(b0+b1)/2,S.yTop-12,P.slate,'700 13.5px '+SANS,"center","middle");
+      var picks=["what it sees","which tools","retry or not","when to stop"];
+      for(var q=0;q<picks.length;q++){ halo(picks[q],(b0+b1)/2,124+q*46,P.slate,'600 11.5px '+SANS,"center","middle"); }
+      ctx.strokeStyle=P.slate; ctx.lineWidth=1.6; ctx.globalAlpha=alpha*pipeK*0.85;
+      for(var r=0;r<RUNS.length;r++){
+        var tx=sx(RUNS[r].s), ty=S.rows[r];
+        ctx.beginPath(); ctx.moveTo(mx+10,my); ctx.lineTo(b0,ty); ctx.lineTo(b1,ty); ctx.lineTo(tx-11,ty); ctx.stroke();
+      }
+      ctx.globalAlpha=alpha*pipeK;
+      dotm(mx,my,P.emerald,9);
+      halo("Opus 4.5",mx,my-20,P.emeraldDark,'700 13px '+MONO,"center","bottom");
+      halo("the model",mx,my+22,P.slate,'600 12px '+SANS,"center","top");
+      ctx.restore();
+    }
+
+    /* the three runs: dots, values, harness names */
+    for(var i=0;i<RUNS.length;i++){
+      var m=RUNS[i], y=S.rows[i], x=sx(m.s);
+      if(pipeK<0.5){ halo(m.h,x-16,y,P.ink,'600 14px '+SANS,"right","middle"); }
+      dotm(x,y,m.top?P.foil:P.slate,7);
+      halo(m.s.toFixed(1),x,y-17,m.top?P.foil:"#2A2D24",'700 17px '+MONO,"center","bottom");
+      if(pipeK>=0.5){ halo(m.h.replace("run by ",""),x+16,y,P.slate,'600 12.5px '+SANS,"left","middle"); }
+    }
+    ctx.restore();
+  }
+
+  function drawSwings(alpha, growK){
+    if(alpha<=0.01) return;
+    ctx.save(); ctx.globalAlpha=alpha;
+    var ticks=[0,10,20,30,40,50];
+    ctx.strokeStyle=P.grid; ctx.lineWidth=1;
+    for(var i=0;i<ticks.length;i++){ var xx=wx(ticks[i]); ctx.beginPath(); ctx.moveTo(xx,Wl.yTop); ctx.lineTo(xx,Wl.yBot); ctx.stroke(); }
+    /* the model-advance band: 2 to 4 points */
+    ctx.fillStyle="rgba(167,171,161,.28)"; ctx.fillRect(wx(2),Wl.yTop,wx(4)-wx(2),Wl.yBot-Wl.yTop);
+    halo("a \u201cmeaningful\u201d model advance \u00b7 2\u20134 pts",wx(4)+10,Wl.yTop+2,"#7A7E72",'600 13px '+SANS,"left","middle");
+    ctx.strokeStyle="#C4C9BB"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(Wl.x0,Wl.yBot); ctx.lineTo(Wl.x1,Wl.yBot); ctx.stroke();
+    ctx.font='600 16px '+MONO; ctx.fillStyle="#2A2D24"; ctx.textAlign="center"; ctx.textBaseline="top";
+    for(var j=0;j<ticks.length;j++){ ctx.fillText(ticks[j]+"",wx(ticks[j]),Wl.tick-10); }
+    ctx.font='600 15px '+SANS; ctx.fillStyle=P.slate; ctx.textAlign="right"; ctx.textBaseline="top";
+    ctx.fillText("points moved by swapping only the harness",Wl.x1,Wl.tick+14);
+    /* the bars, staggered */
+    for(var r=0;r<SWINGS.length;r++){
+      var kk=Math.max(0,Math.min(1,growK*4.4-r*0.85));
+      if(kk<=0.01){ halo(SWINGS[r].n,Wl.x0-14,Wl.rows[r],P.ink,'600 14px '+SANS,"right","middle"); continue; }
+      var y=Wl.rows[r], bw=(wx(SWINGS[r].v)-wx(0))*kk;
+      ctx.fillStyle="rgba(140,34,64,.85)";
+      ctx.fillRect(wx(0),y-13,bw,26);
+      halo(SWINGS[r].n,Wl.x0-14,y,P.ink,'600 14px '+SANS,"right","middle");
+      if(kk>0.95){ halo(SWINGS[r].lbl,wx(0)+bw+9,y,P.foil,'700 16px '+MONO,"left","middle"); }
+    }
+    ctx.restore();
+  }
+
+  function drawDecision(alpha){
+    if(alpha<=0.01) return;
+    ctx.save(); ctx.globalAlpha=alpha;
+    var ticks=[0,5,10,15,20];
+    ctx.strokeStyle=P.grid; ctx.lineWidth=1;
+    for(var i=0;i<ticks.length;i++){ var xx=dx(ticks[i]); ctx.beginPath(); ctx.moveTo(xx,D.yTop); ctx.lineTo(xx,D.yBot); ctx.stroke(); }
+    ctx.strokeStyle="#C4C9BB"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(D.x0,D.yBot); ctx.lineTo(D.x1,D.yBot); ctx.stroke();
+    ctx.font='600 16px '+MONO; ctx.fillStyle="#2A2D24"; ctx.textAlign="center"; ctx.textBaseline="top";
+    for(var j=0;j<ticks.length;j++){ ctx.fillText(ticks[j]+"",dx(ticks[j]),D.tick-10); }
+    ctx.font='600 15px '+SANS; ctx.fillStyle=P.slate; ctx.textAlign="right"; ctx.textBaseline="top";
+    ctx.fillText("points on the benchmark",D.x1,D.tick+14);
+    /* what a better harness buys: 10 to 20 */
+    var y1=D.rows[0];
+    halo("what a better harness buys",dx(10),y1-32,P.emeraldDark,'700 15px '+SANS,"left","middle");
+    ctx.fillStyle="rgba(12,106,82,.88)"; ctx.fillRect(dx(10),y1-16,dx(20)-dx(10),32);
+    ctx.save(); ctx.font='700 16px '+MONO; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillStyle="#FFFFFF"; ctx.fillText("10\u201320 pts",(dx(10)+dx(20))/2,y1); ctx.restore();
+    /* what a typical model upgrade buys: 2 to 4 */
+    var y2=D.rows[1];
+    halo("what a typical model upgrade buys",dx(2),y2-32,"#7A7E72",'700 15px '+SANS,"left","middle");
+    ctx.fillStyle="rgba(167,171,161,.75)"; ctx.fillRect(dx(2),y2-16,dx(4)-dx(2),32);
+    halo("2\u20134 pts",dx(4)+10,y2,"#7A7E72",'700 16px '+MONO,"left","middle");
+    ctx.restore();
+  }
+
+  /* ---- beats: 0 the fan, 1 the pipeline, 2 the swings, 3 the decision ---- */
+  var beat=-1;
+  var stripC=0, pipeC=0, swingC=0, growC=0, decC=0;
+  function targets(){
+    return {
+      strip:(beat===0||beat===1)?1:0,
+      pipe:(beat===1)?1:0,
+      swing:(beat===2)?1:0,
+      grow:(beat===2)?1:0,
+      dec:(beat===3)?1:0
+    };
+  }
+  function ease(c,t,k){ return c+(t-c)*k; }
+
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    drawStrip(stripC, pipeC);
+    drawSwings(swingC, growC);
+    drawDecision(decC);
+  }
+
+  var rafId=null;
+  function tick(){
+    var t=targets();
+    stripC=ease(stripC,t.strip,0.10); pipeC=ease(pipeC,t.pipe,0.09);
+    swingC=ease(swingC,t.swing,0.10); growC=ease(growC,t.grow,0.045);
+    decC=ease(decC,t.dec,0.10);
+    render();
+    var moving = Math.abs(stripC-t.strip)>0.01 || Math.abs(pipeC-t.pipe)>0.01 ||
+                 Math.abs(swingC-t.swing)>0.01 || Math.abs(growC-t.grow)>0.005 ||
+                 Math.abs(decC-t.dec)>0.01;
+    if(moving){ rafId=requestAnimationFrame(tick); }
+    else { stripC=t.strip; pipeC=t.pipe; swingC=t.swing; growC=t.grow; decC=t.dec; render(); rafId=null; }
+  }
+  function kick(){
+    if(reduce){ var t=targets(); stripC=t.strip; pipeC=t.pipe; swingC=t.swing; growC=t.grow; decC=t.dec; render(); }
+    else if(rafId===null){ rafId=requestAnimationFrame(tick); }
+  }
+  function setChart(b){ if(b===beat) return; beat=b; kick(); }
+
+  drawStripAxes(1); // static first frame before any script-driven state
+
+  var scenes=[
+    { chart:0, figs:[{v:"9.5 pts",l:"same model, harness to harness",c:P.foil},{v:"3",l:"scores from one model",c:P.slate}] },
+    { chart:1, figs:[{v:"4",l:"decisions the harness owns",c:P.slate},{v:"0",l:"model changes involved",c:P.foil}] },
+    { chart:2, figs:[{v:"48 pts",l:"largest harness-only swing",c:P.foil},{v:"2\u20134",l:"a \u201cmeaningful\u201d model advance",c:P.gray}] },
+    { chart:3, figs:[{v:"10\u201320",l:"points a better harness buys",c:P.emerald},{v:"2\u20134",l:"points a model upgrade buys",c:P.gray}] }
+  ];
+  var N=scenes.length;
+  var figsEl=document.getElementById('figs'), dotsEl=document.getElementById('dots');
+  var prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+  var caps=[].slice.call(document.querySelectorAll('.cap'));
+  var stageEl=document.getElementById('stage');
+
+  function figsHTML(i){ var f=scenes[i].figs, o=""; for(var j=0;j<f.length;j++){ o+='<div class="fig"><span class="v" style="color:'+f[j].c+'">'+f[j].v+'</span><span class="l">'+f[j].l+'</span></div>'; } return o; }
+
+  var dots=[];
+  for(var d=0;d<N;d++){ (function(k){ var b=document.createElement('button'); b.type='button'; b.className='dot'; b.setAttribute('aria-label','Go to scene '+(k+1)); b.addEventListener('click',function(){ show(k); }); dotsEl.appendChild(b); dots.push(b); })(d); }
+
+  var idx=0, swapT=null;
+  function show(i){
+    i=Math.max(0,Math.min(N-1,i)); idx=i;
+    setChart(scenes[idx].chart);
+    for(var k=0;k<dots.length;k++){ dots[k].classList.toggle('is-on',k===idx); }
+    prevBtn.disabled=(idx===0); nextBtn.disabled=(idx===N-1);
+    if(reduce){
+      figsEl.innerHTML=figsHTML(idx);
+      for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+    } else {
+      figsEl.style.opacity=0;
+      if(swapT) clearTimeout(swapT);
+      swapT=setTimeout(function(){
+        figsEl.innerHTML=figsHTML(idx); figsEl.style.opacity=1;
+        for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+      },160);
+    }
+  }
+
+  prevBtn.addEventListener('click',function(){ show(idx-1); });
+  nextBtn.addEventListener('click',function(){ show(idx+1); });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'){ show(idx+1); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ show(idx-1); }
+  });
+  var x0=null;
+  stageEl.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+  stageEl.addEventListener('touchend',function(e){ if(x0===null) return; var dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40){ show(dx<0?idx+1:idx-1); } x0=null; },{passive:true});
+
+  figsEl.innerHTML=figsHTML(0);
+  caps[0].classList.add('is-on');
+  dots[0].classList.add('is-on');
+  prevBtn.disabled=true; nextBtn.disabled=(N<=1);
+  setChart(scenes[0].chart);
+})();
+</script>
+<!--CHROME:FOOTER-->
+</body>
+</html>
