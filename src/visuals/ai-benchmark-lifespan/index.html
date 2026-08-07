@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- inject:head -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why AI benchmarks that lasted four years now die in two years</title>
+<meta name="description" content="The flagship 2020 AI exam lasted four years before models passed 90%. The 2021 and 2023 tests fell in 17 and 24 months. Why benchmark scores now expire.">
+<link rel="canonical" href="https://jishan.ca/visuals/ai-benchmark-lifespan">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why AI benchmarks that lasted four years now die in two years">
+<meta property="og:description" content="A benchmark dies when frontier models pass 90%. That took four years for the 2020 exam, then 17 and 24 months for the tests that followed.">
+<meta property="og:url" content="https://jishan.ca/visuals/ai-benchmark-lifespan">
+<meta property="og:image" content="https://jishan.ca/visuals/ai-benchmark-lifespan/poster.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Syed Tanveer Jishan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --emerald:#0C6A52; --emerald-dark:#08493A; --foil:#8C2240;
+    --ink:#181A15; --slate:#6A6F64; --grid:#E3E6DF; --gray:#A7ABA1;
+    --hair:#E9ECE3;
+    --stageW:600px;
+    --font:"IBM Plex Sans",Arial,sans-serif;
+    --mono:"IBM Plex Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--white);color:var(--ink);}
+  body{font-family:var(--font);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;display:flex;flex-direction:column;align-items:center;}
+  a{color:var(--emerald-dark);text-decoration:none;border-bottom:1px solid rgba(12,106,82,.28);}
+  a:hover{border-bottom-color:var(--emerald);}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--emerald);outline-offset:3px;border-radius:4px;}
+
+  /* The frame: a portrait stage the reader steps through on mobile, a landscape two-column frame on desktop */
+  .stage{
+    width:100%; max-width:var(--stageW); margin:0 auto; min-height:100svh;
+    padding:clamp(20px,3.2vh,34px) 24px;
+    display:flex; flex-direction:column; font-variant-numeric:tabular-nums;
+  }
+
+  .mast{flex:0 0 auto;}
+  .mast h1{font-size:clamp(28px,6vw,44px);line-height:1.07;letter-spacing:-.02em;font-weight:700;margin:0 0 12px;text-wrap:balance;}
+  .mast h1 .lk{color:var(--foil);}
+  .mast .standfirst{font-size:clamp(16px,2.4vw,20px);line-height:1.45;color:#2A2D24;margin:0;max-width:46ch;}
+  .mast .pubdates{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:11px 0 24px;font-size:13px;color:var(--slate);}
+  .mast .pubdates time{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .mast .pubdates .sep{color:var(--gray);}
+
+  /* viz + caption share the middle, with balanced vertical rhythm */
+  .frame{display:contents;}
+  .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;align-items:stretch;min-height:0;padding:8px 0;}
+  .viz{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;}
+  .figs{display:flex;gap:clamp(24px,6vw,48px);justify-content:center;align-items:flex-start;min-height:74px;transition:opacity .16s ease;}
+  .fig{display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .fig .v{font-family:var(--mono);font-size:clamp(33px,8vw,50px);font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .fig .l{font-size:13px;color:var(--slate);margin-top:7px;max-width:15ch;line-height:1.3;}
+  .chartwrap{width:100%;}
+  svg.chart{width:100%;height:auto;display:block;}
+
+  .caps{position:relative;}
+  .cap{position:absolute;left:0;right:0;top:0;opacity:0;transition:opacity .3s ease;pointer-events:none;}
+  .cap.is-on{opacity:1;pointer-events:auto;position:relative;}
+  .cap .idx{font-family:var(--mono);margin:0 0 10px;}
+  .cap .idx .n{font-size:19px;font-weight:700;color:var(--ink);letter-spacing:.01em;}
+  .cap .idx .t{font-size:16px;font-weight:600;color:var(--slate);}
+  .cap .txt{font-size:clamp(17px,2.5vw,20px);line-height:1.34;letter-spacing:-.005em;color:var(--ink);margin:0;}
+  .cap .txt b{font-weight:700;}
+  .cap .txt b.q{color:var(--emerald);}
+
+  /* navigation controls */
+  .nav{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;}
+  .btn{font-family:var(--font);font-size:15px;font-weight:600;color:var(--emerald-dark);background:none;border:1px solid var(--hair);border-radius:999px;padding:9px 17px;cursor:pointer;transition:border-color .15s ease;}
+  .btn:hover:not(:disabled){border-color:var(--emerald);}
+  .btn:disabled{opacity:.3;cursor:default;}
+  .dots{display:flex;gap:9px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--gray);border:none;padding:0;cursor:pointer;opacity:.45;transition:opacity .2s ease,transform .2s ease,background .2s ease;}
+  .dot.is-on{background:var(--emerald);opacity:1;transform:scale(1.18);}
+
+  .foot{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:10px;padding-top:13px;border-top:1px solid var(--hair);font-size:12px;color:var(--slate);}
+  .foot .src{max-width:64%;line-height:1.3;}
+  .foot .me{display:flex;align-items:center;gap:6px;white-space:nowrap;color:var(--slate);border:none;}
+  .foot .me svg{width:14px;height:14px;display:block;fill:currentColor;}
+
+  /* sources for credibility + search, below the frame */
+  .sources-section{width:100%;max-width:var(--stageW);margin:0 auto;padding:32px 24px 40px;border-top:1px solid var(--hair);}
+  .sources-section h2{font-size:clamp(20px,3vw,25px);line-height:1.16;letter-spacing:-.01em;margin:0 0 8px;font-weight:700;}
+  .method-note{font-size:14px;line-height:1.6;color:var(--slate);margin:0 0 18px;}
+  .sources{font-size:15px;color:#31342A;list-style:none;padding:0;margin:0;}
+  .sources li{padding:11px 0;border-top:1px solid var(--hair);}
+  .sources li b{font-weight:600;}
+  .sources .meta{color:var(--slate);font-size:13.5px;}
+
+  .readnext{width:100%;max-width:var(--stageW);margin:0 auto;padding:24px 24px 64px;}
+  .readnext h2{font-size:clamp(18px,2.6vw,21px);margin:0 0 6px;font-weight:700;}
+  .readnext ul{list-style:none;padding:0;margin:0;font-size:15px;}
+  .readnext li{padding:9px 0;border-top:1px solid var(--hair);}
+
+  @media (min-width:900px){
+    .stage{max-width:1120px;min-height:auto;display:block;padding:clamp(34px,5vh,58px) 36px;}
+    .mast h1{font-size:clamp(44px,5.2vw,60px);text-wrap:wrap;}
+    .mast .standfirst{font-size:clamp(19px,1.5vw,22px);max-width:none;}
+    .mast .pubdates{font-size:14px;margin-top:13px;}
+    .frame{display:flex;flex-direction:column;border:1px solid var(--hair);border-radius:18px;padding:30px 38px 24px;margin:16px 0 4px;}
+    .body{display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(34px,4vw,60px);align-items:center;padding:0;}
+    .viz{gap:12px;}
+    .cap .idx{margin-bottom:14px;}
+    .cap .idx .n{font-size:21px;} .cap .idx .t{font-size:17px;}
+    .cap .txt{font-size:clamp(19px,1.4vw,23px);line-height:1.46;}
+    .nav{justify-content:center;gap:clamp(20px,3vw,40px);border-top:1px solid var(--hair);margin-top:22px;padding-top:18px;}
+    .foot{margin-top:18px;}
+    .sources-section{max-width:1120px;padding:36px 36px 40px;}
+    .sources-section h2,.method-note,.sources{max-width:760px;}
+    .readnext{max-width:1120px;padding:24px 36px 72px;}
+    .readnext h2,.readnext ul{max-width:760px;}
+  }
+  @media (max-width:560px){
+    body{font-size:17px;}
+    .stage{padding:clamp(18px,2.6vh,26px) 18px;}
+    .figs{gap:20px;}
+    .sources-section{padding-left:18px;padding-right:18px;}
+    .readnext{padding-left:18px;padding-right:18px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .figs,.cap,.dot{transition:none;}
+  }
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+<!-- inject:header -->
+
+<main class="stage" id="stage" aria-label="Why AI benchmarks that lasted four years now die in two years">
+
+  <header class="mast">
+    <h1>Why AI benchmarks that lasted four years now <span class="lk">die in two years</span></h1>
+    <p class="standfirst">A public benchmark stops working the day frontier models score past 90% on it, because beyond that line the test no longer tells models apart. The flagship 2020 exam took four years to get there, and the two big tests that followed died in 17 and 24 months.</p>
+    <p class="pubdates"><span>Published <time datetime="2026-07-30">July 30, 2026</time></span><span class="sep">&middot;</span><span>Updated <time datetime="2026-08-05">August 5, 2026</time></span></p>
+  </header>
+
+  <div class="frame">
+  <div class="body">
+    <section class="viz">
+      <div class="figs" id="figs"></div>
+      <div class="chartwrap">
+        <svg class="chart" id="chart" viewBox="0 0 760 460" role="img" aria-label="Best published frontier model scores on four AI benchmarks over time. The 2020 exam rises from 43.9 to 92.3 percent across 48 months. The 2021 math test crosses 90 percent in 17 months and the 2023 science test in 24 months. The three lifespans then line up as bars from a shared start, all at or within two years, and the 2025 exam sits open at 19 months.">
+          <g id="dyn"></g>
+        </svg>
+      </div>
+    </section>
+
+    <section class="caps" id="caps" aria-live="polite">
+      <article class="cap" data-i="0">
+        <p class="idx"><span class="n">01</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>A benchmark dies the day a frontier model scores past 90% on it, and the field's flagship exam took 48 months to get there.</b> The 57-subject knowledge exam released in September 2020 opened with the best model at 43.9%, far below the 89.8% that human experts average. In September 2024 a frontier model posted 92.3%, above the experts and inside the test's own error, so the score stopped separating models.</p>
+      </article>
+      <article class="cap" data-i="1">
+        <p class="idx"><span class="n">02</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>The two big tests that came after it died in 17 and 24 months, respectively.</b> The 2021 test held grade-school math word problems, and the best setup in its launch paper solved about 55% of them, yet GPT-4 posted 92% seventeen months later. The 2023 test was built so answers cannot be found by searching, i.e. skilled non-experts with full web access managed just 34%, and it still fell in November 2025 when a frontier model posted 91.9%.</p>
+      </article>
+      <article class="cap" data-i="2">
+        <p class="idx"><span class="n">03</span><span class="t"> / 04</span></p>
+        <p class="txt"><b>Once you line the three lifespans up from the same starting line, you will notice everything after the 2020 exam fell at or within two years.</b> Harder questions did not buy more time, and that is because difficulty only lowers the score a test starts at, while the speed of the climb is set by model progress. Basically, a harder exam starts from a lower score, but it does not stay difficult for longer.</p>
+      </article>
+      <article class="cap" data-i="3">
+        <p class="idx"><span class="n">04</span><span class="t"> / 04</span></p>
+        <p class="txt"><b class="q">So, what is the key takeaway?</b> A benchmark score is a dated measurement, so the number means little without knowing when it was recorded. It is better to treat any public score more than a year old as expired. The 2025 exam was assembled by subject experts to be the final one, and frontier models opened it in single digits, reached 37.5% by month 10, and sit near half at month 19, right on the two-year pace. So for anything you ship, the yardstick that keeps working is a private eval on your own tasks, refreshed as models move.</p>
+      </article>
+    </section>
+  </div>
+
+  <nav class="nav" aria-label="Scene navigation">
+    <button class="btn prev" id="prev" type="button" aria-label="Previous scene">&lsaquo; Prev</button>
+    <div class="dots" id="dots"></div>
+    <button class="btn next" id="next" type="button" aria-label="Next scene">Next &rsaquo;</button>
+  </nav>
+  </div>
+
+  <footer class="foot">
+    <span class="src">MMLU 2020&ndash;2024 &middot; GSM8K 2021&ndash;2023 &middot; GPQA 2023&ndash;2025 &middot; HLE 2025&ndash; &middot; lifespan = release to first 90%</span>
+    <a class="me" href="https://www.linkedin.com/in/sjishan" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"></path></svg>
+      <span>linkedin.com/in/sjishan</span>
+    </a>
+  </footer>
+
+</main>
+
+<!-- inject:subscribe -->
+
+<!--SUBSCRIBE-->
+<section class="sources-section" aria-label="Sources">
+  <h2>Sources and method</h2>
+  <p class="method-note">A test is counted as dead the first time a frontier model reports 90% or better on it under standard prompting, and its lifespan is the months from the test's release to that report. One earlier 90.04% MMLU claim from December 2023 used a nonstandard 32-sample voting method, so the count starts from the first standard-methodology pass in September 2024. The curves connect each test's published start and end scores, and the month-by-month shape between those points is drawn to read clearly. The open bar for the 2025 exam shows its age so far, and the dashed extension to the two-year line is a projection, marked apart from the reported data.</p>
+  <ul class="sources">
+    <li><b>Hendrycks et al., Measuring Massive Multitask Language Understanding</b> (arXiv 2009.03300, Sept 2020). <span class="meta">MMLU release. GPT-3 few-shot at 43.9%, estimated human expert accuracy 89.8%.</span> <a href="https://arxiv.org/abs/2009.03300" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>OpenAI, Learning to reason with LLMs</b> (Sept 2024). <span class="meta">o1 at 92.3% on MMLU, 0-shot chain of thought, the first frontier model past 90% under standard prompting.</span> <a href="https://openai.com/index/learning-to-reason-with-llms/" target="_blank" rel="noopener">openai.com</a></li>
+    <li><b>Cobbe et al., Training Verifiers to Solve Math Word Problems</b> (arXiv 2110.14168, Oct 2021). <span class="meta">GSM8K release. The paper's best configuration, a 175B model with a trained verifier, solved about 55%.</span> <a href="https://arxiv.org/abs/2110.14168" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>OpenAI, GPT-4 Technical Report</b> (March 2023). <span class="meta">GSM8K at 92.0%, 5-shot chain of thought, 17 months after release.</span> <a href="https://arxiv.org/abs/2303.08774" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>Rein et al., GPQA: A Graduate-Level Google-Proof Q&amp;A Benchmark</b> (arXiv 2311.12022, Nov 2023). <span class="meta">GPT-4 baseline 39%. PhD experts 65%, or 74% discounting mistakes they later flagged. Skilled non-experts with full web access 34%.</span> <a href="https://arxiv.org/abs/2311.12022" target="_blank" rel="noopener">arxiv.org</a></li>
+    <li><b>Google, Introducing Gemini 3</b> (Nov 18, 2025). <span class="meta">GPQA Diamond 91.9%, 24 months after release. Humanity's Last Exam 37.5% without tools, 10 months after release.</span> <a href="https://blog.google/products/gemini/gemini-3/" target="_blank" rel="noopener">blog.google</a></li>
+    <li><b>Phan et al., Humanity's Last Exam, and the Scale AI leaderboard</b> (Jan 2025). <span class="meta">2,500 expert-written questions. Launch-era frontier scores in single digits, with o1 at 8.0% on the revised set.</span> <a href="https://labs.scale.com/leaderboard/humanitys_last_exam" target="_blank" rel="noopener">labs.scale.com</a></li>
+    <li><b>LLM-Stats aggregate leaderboard</b> (Aug 2026). <span class="meta">Top tracked no-tool scores near 53%. Evaluation protocols vary by tracker, so the figure is read as roughly half.</span> <a href="https://llm-stats.com" target="_blank" rel="noopener">llm-stats.com</a></li>
+  </ul>
+</section>
+
+<section class="readnext" aria-label="Read next">
+  <h2>Read next</h2>
+  <ul>
+    <li><a href="https://jishan.ca/visuals/benchmark-vs-real-tasks">Why AI models top the benchmark and fail the job</a></li>
+    <li><a href="https://jishan.ca/visuals/ai-native-retention-leaky-bucket">Why AI products leak half their revenue in a year</a></li>
+  </ul>
+</section>
+
+<!-- inject:footer -->
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var C = {emerald:[12,106,82], emeraldDark:[8,73,58], foil:[140,34,64], ink:[24,26,21], slate:[106,111,100], grid:[227,230,223], gray:[167,171,161], steel:[60,97,120], auber:[110,74,107]};
+  function rgb(a){return "rgb("+Math.round(a[0])+","+Math.round(a[1])+","+Math.round(a[2])+")";}
+  var MONO="'IBM Plex Mono',monospace", SANS="'IBM Plex Sans',Arial,sans-serif";
+
+  // ----- geometry -----
+  var VBW=760, VBH=460, PADL=64, PADR=26, PADT=30;
+  var pxL=PADL, pxR=VBW-PADR, pyT=PADT, pyB=372;
+  var PW=pxR-pxL, PH=pyB-pyT;
+  var CAL_MONTHS=71;             // Sep 2020 .. Aug 2026
+  var BAR_MONTHS=54;             // months-from-release axis
+  function Xc(t){ return pxL + (t/CAL_MONTHS)*PW; }
+  function Xb(m){ return pxL + (m/BAR_MONTHS)*PW; }
+  function Y(v){ return pyB - (v/100)*PH; }
+  function sstep(u){ return Math.pow(u,2.6); }
+  function el(tag,attrs){ var e=document.createElementNS(SVGNS,tag),k; for(k in attrs){ if(attrs.hasOwnProperty(k)) e.setAttribute(k,attrs[k]); } return e; }
+  function txt(attrs,content,halo){ var t=el('text',attrs); if(halo){ t.setAttribute('stroke','#FFFFFF'); t.setAttribute('stroke-width',4); t.setAttribute('paint-order','stroke'); t.setAttribute('stroke-linejoin','round'); } t.textContent=content; return t; }
+
+  var dyn = document.getElementById('dyn');
+  if(!dyn) return;
+
+  // ----- the four tests (months are counted from Sep 2020 for the calendar axis) -----
+  var tests=[
+    {id:'mmlu', name:'MMLU',  rel:0,  die:48, v0:43.9, v1:92.3, col:C.ink,   lane:338, rowY:100, row:'MMLU · the 57-subject exam · Sep 2020'},
+    {id:'gsm',  name:'GSM8K', rel:13, die:30, v0:55,   v1:92.0, col:C.steel, lane:350, rowY:172, row:'GSM8K · grade-school math · Oct 2021'},
+    {id:'gpqa', name:'GPQA',  rel:38, die:62, v0:39,   v1:91.9, col:C.auber, lane:362, rowY:244, row:'GPQA · search-proof science · Nov 2023'}
+  ];
+  var hle={ name:'HLE', rel:52, age:19, col:C.emerald, rowY:316, row:'Humanity\u2019s Last Exam · Jan 2025' };
+  var BARH=22;
+
+  // ----- static scaffold: gridlines, axes, numerals -----
+  var gy=[0,50,100], i;
+  var gridG=el('g',{});
+  for(i=0;i<gy.length;i++){
+    gridG.appendChild(el('line',{x1:pxL,y1:Y(gy[i]),x2:pxR,y2:Y(gy[i]),stroke:rgb(C.grid),"stroke-width":1}));
+  }
+  gridG.appendChild(el('line',{x1:pxL,y1:pyB,x2:pxR,y2:pyB,stroke:"#C4C9BB","stroke-width":1.5}));
+  gridG.appendChild(el('line',{x1:pxL,y1:pyT,x2:pxL,y2:pyB,stroke:"#C4C9BB","stroke-width":1.5}));
+  dyn.appendChild(gridG);
+
+  var yNums=el('g',{opacity:1});
+  for(i=0;i<gy.length;i++){ yNums.appendChild(txt({x:pxL-10,y:Y(gy[i])+5,fill:"#2A2D24","font-size":16,"text-anchor":"end","font-family":MONO,"font-weight":600},gy[i]+"%")); }
+  yNums.appendChild(txt({x:pxL-10,y:Y(90)+5,fill:rgb(C.foil),"font-size":16,"text-anchor":"end","font-family":MONO,"font-weight":700},"90%"));
+  yNums.appendChild(txt({x:pxL,y:pyT-9,fill:rgb(C.slate),"font-size":15,"font-weight":600,"text-anchor":"start","font-family":SANS},"best published score"));
+  dyn.appendChild(yNums);
+
+  // 90% death line + its reading
+  var dieLine=el('line',{x1:pxL,y1:Y(90),x2:pxR,y2:Y(90),stroke:rgb(C.foil),"stroke-width":1.4,"stroke-dasharray":"5 5",opacity:1});
+  dyn.appendChild(dieLine);
+  var dieLab=txt({x:pxL+8,y:Y(90)-8,fill:rgb(C.foil),"font-size":15,"font-weight":600,"font-family":SANS},"where a test dies",true);
+  dyn.appendChild(dieLab);
+
+  // x tick labels, calendar mode (Jan of each year)
+  var calTicks=el('g',{opacity:1});
+  var years=[2021,2022,2023,2024,2025,2026];
+  for(i=0;i<years.length;i++){ var t=(years[i]-2020)*12-8; calTicks.appendChild(txt({x:Xc(t),y:pyB+24,fill:"#2A2D24","font-size":15,"text-anchor":"middle","font-family":MONO,"font-weight":600},String(years[i]))); }
+  dyn.appendChild(calTicks);
+  var calTitle=txt({x:pxR,y:pyB+44,fill:rgb(C.slate),"font-size":15,"font-weight":600,"text-anchor":"end","font-family":SANS},"year",true);
+  dyn.appendChild(calTitle);
+
+  // x tick labels, bar mode (months from release)
+  var barTicks=el('g',{opacity:0});
+  var bm=[0,12,24,36,48];
+  for(i=0;i<bm.length;i++){ barTicks.appendChild(txt({x:Xb(bm[i]),y:pyB+24,fill:"#2A2D24","font-size":15,"text-anchor":"middle","font-family":MONO,"font-weight":600},String(bm[i]))); }
+  dyn.appendChild(barTicks);
+  var barTitle=txt({x:pxR,y:pyB+44,fill:rgb(C.slate),"font-size":15,"font-weight":600,"text-anchor":"end","font-family":SANS,opacity:0},"months after the test came out",true);
+  dyn.appendChild(barTitle);
+
+  // ----- curves (calendar mode) -----
+  function curvePath(T){
+    var d="",m,steps=60;
+    for(m=0;m<=steps;m++){
+      var u=m/steps, tt=T.rel+(T.die-T.rel)*u, vv=T.v0+(T.v1-T.v0)*sstep(u);
+      d+=(m===0?"M":"L")+Xc(tt).toFixed(2)+","+Y(vv).toFixed(2)+" ";
+    }
+    return d.trim();
+  }
+  for(i=0;i<tests.length;i++){
+    var T=tests[i];
+    T.path=el('path',{d:curvePath(T),fill:"none",stroke:rgb(T.col),"stroke-width":3.4,"stroke-linecap":"round",opacity:0});
+    dyn.appendChild(T.path);
+    try{ T.len=T.path.getTotalLength(); }catch(e){ T.len=900; }
+    T.path.setAttribute("stroke-dasharray",T.len);
+    T.path.setAttribute("stroke-dashoffset",T.len);
+    T.sdot=el('circle',{cx:Xc(T.rel),cy:Y(T.v0),r:3.6,fill:rgb(T.col),opacity:0});
+    dyn.appendChild(T.sdot);
+    T.ddot=el('circle',{cx:Xc(T.die),cy:Y(T.v1),r:5,fill:"#FFFFFF",stroke:rgb(C.foil),"stroke-width":2.4,opacity:0});
+    dyn.appendChild(T.ddot);
+    T.tag=txt({x:Xc(T.die),y:Y(T.v1)-15,fill:rgb(T.col),"font-size":14,"font-weight":700,"text-anchor":"middle","font-family":MONO,opacity:0},T.name,true);
+    dyn.appendChild(T.tag);
+  }
+  // start-value labels (placed to avoid the neighboring curves)
+  tests[0].sval=txt({x:Xc(0)+10,y:Y(43.9)+22,fill:rgb(C.ink),"font-size":13,"font-weight":700,"font-family":MONO,opacity:0},"43.9%",true);
+  tests[1].sval=txt({x:Xc(13)-8,y:Y(55)-12,fill:rgb(C.steel),"font-size":13,"font-weight":700,"text-anchor":"end","font-family":MONO,opacity:0},"55%",true);
+  tests[2].sval=txt({x:Xc(38)+8,y:Y(39)+18,fill:rgb(C.auber),"font-size":13,"font-weight":700,"font-family":MONO,opacity:0},"39%",true);
+  for(i=0;i<tests.length;i++){ dyn.appendChild(tests[i].sval); }
+
+  // ----- brackets: the persistent lifespan marks that become the bars -----
+  for(i=0;i<tests.length;i++){
+    var T2=tests[i];
+    T2.g={x:Xc(T2.rel), w:Xc(T2.die)-Xc(T2.rel), y:T2.lane-1.4, h:2.8, op:0};
+    T2.gT={x:T2.g.x, w:T2.g.w, y:T2.g.y, h:T2.g.h, op:0};
+    T2.vx=0; T2.vw=0; T2.vy=0; T2.vh=0;
+    T2.rect=el('rect',{x:T2.g.x,y:T2.g.y,width:T2.g.w,height:T2.g.h,fill:rgb(T2.col),rx:1.4,opacity:0});
+    dyn.appendChild(T2.rect);
+    T2.tickL=el('rect',{x:T2.g.x-0.75,y:T2.lane-5,width:1.5,height:10,fill:rgb(T2.col),opacity:0});
+    T2.tickR=el('rect',{x:T2.g.x+T2.g.w-0.75,y:T2.lane-5,width:1.5,height:10,fill:rgb(T2.col),opacity:0});
+    dyn.appendChild(T2.tickL); dyn.appendChild(T2.tickR);
+    var mLab=(T2.die-T2.rel)+" mo";
+    T2.calLab=txt({x:T2.g.x+T2.g.w+7,y:T2.lane+4.5,fill:rgb(T2.col),"font-size":13,"font-weight":700,"font-family":MONO,opacity:0},mLab,true);
+    dyn.appendChild(T2.calLab);
+    T2.barLab=txt({x:0,y:0,fill:"#FFFFFF","font-size":13,"font-weight":700,"text-anchor":"end","font-family":MONO,opacity:0},mLab);
+    dyn.appendChild(T2.barLab);
+    T2.rowLab=txt({x:pxL,y:T2.rowY-17,fill:rgb(C.slate),"font-size":13,"font-weight":600,"font-family":SANS,opacity:0},T2.row,true);
+    dyn.appendChild(T2.rowLab);
+  }
+
+  // two-year ceiling (bar mode)
+  var ceilG=el('g',{opacity:0});
+  ceilG.appendChild(el('line',{x1:Xb(24),y1:52,x2:Xb(24),y2:pyB,stroke:rgb(C.foil),"stroke-width":1.4,"stroke-dasharray":"5 5"}));
+  ceilG.appendChild(txt({x:Xb(24),y:42,fill:rgb(C.foil),"font-size":14,"font-weight":700,"text-anchor":"middle","font-family":MONO},"24 mo",true));
+  ceilG.appendChild(txt({x:Xb(24)+10,y:64,fill:rgb(C.foil),"font-size":15,"font-weight":600,"font-family":SANS},"no test after 2020 outlived this line",true));
+  dyn.appendChild(ceilG);
+
+  // the 2025 exam, still open (scene 4)
+  var hleG=el('g',{opacity:0});
+  hle.p=0; hle.pT=0; hle.vp=0;
+  hle.rowLab=txt({x:pxL,y:hle.rowY-17,fill:rgb(C.slate),"font-size":13,"font-weight":600,"font-family":SANS},hle.row,true);
+  hleG.appendChild(hle.rowLab);
+  hle.rect=el('rect',{x:pxL,y:hle.rowY-BARH/2,width:0,height:BARH,fill:rgb(C.emerald),rx:2});
+  hleG.appendChild(hle.rect);
+  hle.dash=el('line',{x1:Xb(hle.age),y1:hle.rowY,x2:Xb(24),y2:hle.rowY,stroke:rgb(C.emerald),"stroke-width":2,"stroke-dasharray":"4 5",opacity:0});
+  hleG.appendChild(hle.dash);
+  hle.barLab=txt({x:0,y:hle.rowY+4.5,fill:"#FFFFFF","font-size":13,"font-weight":700,"text-anchor":"end","font-family":MONO},"19 mo");
+  hleG.appendChild(hle.barLab);
+  hle.open=txt({x:(Xb(hle.age)+Xb(24))/2,y:hle.rowY+27,fill:rgb(C.emeraldDark),"font-size":13,"font-weight":600,"text-anchor":"middle","font-family":SANS,opacity:0},"still open, Aug 2026",true);
+  hleG.appendChild(hle.open);
+  dyn.appendChild(hleG);
+
+  // ----- chart state -----
+  var st={
+    m0:0,m0T:0, m1:0,m1T:0, m2:0,m2T:0,           // curve draw progress
+    calOp:1,calOpT:1,                              // calendar scaffolding (curves layer, y numerals, 90 line, cal ticks)
+    barOp:0,barOpT:0,                              // bar scaffolding (bar ticks, row labels, ceiling, bar value labels)
+    hleOp:0,hleOpT:0, dashOp:0,dashOpT:0
+  };
+  var current=-1, sceneT0=0, staggerCurves=false, staggerBars=false;
+  function nowMs(){ return window.performance?performance.now():Date.now(); }
+  function approach(cur,tar,rate,dt){ return cur+(tar-cur)*Math.min(1,rate*dt); }
+
+  function setChart(s){
+    if(s===current) return;
+    var prev=current; current=s;
+    st.m0T=1;
+    st.m1T=(s>=1)?1:0; st.m2T=(s>=1)?1:0;
+    st.calOpT=(s<=1)?1:0;
+    st.barOpT=(s>=2)?1:0;
+    st.hleOpT=(s>=3)?1:0; st.dashOpT=(s>=3)?1:0;
+    hle.pT=(s>=3)?1:0;
+    for(var k=0;k<tests.length;k++){
+      var T=tests[k], bar=(s>=2);
+      T.gT.x = bar? pxL : Xc(T.rel);
+      T.gT.w = bar? (Xb(T.die-T.rel)-pxL) : (Xc(T.die)-Xc(T.rel));
+      T.gT.y = bar? (T.rowY-BARH/2) : (T.lane-1.4);
+      T.gT.h = bar? BARH : 2.8;
+      T.gT.op = (s>=1 || k===0) ? 1 : 0;
+    }
+    staggerCurves=(prev<1 && s>=1);
+    staggerBars=((prev<2 && s>=2)||(prev>=2 && s<2));
+    if(staggerCurves||staggerBars) sceneT0=nowMs();
+    if(reduce){ snap(); applyChart(); }
+  }
+
+  function snap(){
+    st.m0=st.m0T; st.m1=st.m1T; st.m2=st.m2T;
+    st.calOp=st.calOpT; st.barOp=st.barOpT; st.hleOp=st.hleOpT; st.dashOp=st.dashOpT;
+    hle.p=hle.pT; hle.vp=0;
+    for(var k=0;k<tests.length;k++){ var T=tests[k];
+      T.g.x=T.gT.x; T.g.w=T.gT.w; T.g.y=T.gT.y; T.g.h=T.gT.h; T.g.op=T.gT.op;
+      T.vx=T.vw=T.vy=T.vh=0;
+    }
+    staggerCurves=false; staggerBars=false;
+  }
+
+  function applyChart(){
+    var prog=[st.m0,st.m1,st.m2], k, T;
+    for(k=0;k<tests.length;k++){
+      T=tests[k];
+      T.path.setAttribute("stroke-dashoffset", T.len*(1-prog[k]));
+      var cOp=st.calOp*Math.min(1,prog[k]*3);
+      T.path.setAttribute("opacity", cOp.toFixed(3));
+      T.sdot.setAttribute("opacity", cOp.toFixed(3));
+      T.sval.setAttribute("opacity", cOp.toFixed(3));
+      var endOp=st.calOp*(prog[k]>0.97?1:0);
+      T.ddot.setAttribute("opacity", endOp.toFixed(3));
+      T.tag.setAttribute("opacity", endOp.toFixed(3));
+      // the persistent bracket
+      T.rect.setAttribute("x",T.g.x.toFixed(2)); T.rect.setAttribute("width",Math.max(0,T.g.w).toFixed(2));
+      T.rect.setAttribute("y",T.g.y.toFixed(2)); T.rect.setAttribute("height",T.g.h.toFixed(2));
+      T.rect.setAttribute("rx",(T.g.h>10?3:1.4));
+      T.rect.setAttribute("opacity",T.g.op.toFixed(3));
+      var tickOp=T.g.op*st.calOp;
+      T.tickL.setAttribute("x",(T.g.x-0.75).toFixed(2)); T.tickR.setAttribute("x",(T.g.x+T.g.w-0.75).toFixed(2));
+      T.tickL.setAttribute("opacity",tickOp.toFixed(3)); T.tickR.setAttribute("opacity",tickOp.toFixed(3));
+      T.calLab.setAttribute("x",(T.g.x+T.g.w+7).toFixed(2));
+      T.calLab.setAttribute("opacity",(T.g.op*st.calOp).toFixed(3));
+      T.barLab.setAttribute("x",(T.g.x+T.g.w-7).toFixed(2)); T.barLab.setAttribute("y",(T.g.y+T.g.h/2+4.5).toFixed(2));
+      T.barLab.setAttribute("opacity",(st.barOp*(T.g.h>16?1:0)).toFixed(3));
+      T.rowLab.setAttribute("opacity",st.barOp.toFixed(3));
+    }
+    yNums.setAttribute("opacity",st.calOp.toFixed(3));
+    dieLine.setAttribute("opacity",st.calOp.toFixed(3));
+    dieLab.setAttribute("opacity",st.calOp.toFixed(3));
+    calTicks.setAttribute("opacity",st.calOp.toFixed(3));
+    calTitle.setAttribute("opacity",st.calOp.toFixed(3));
+    for(k=0;k<gy.length;k++){ gridG.childNodes[k].setAttribute("opacity",(0.9*st.calOp).toFixed(3)); }
+    barTicks.setAttribute("opacity",st.barOp.toFixed(3));
+    barTitle.setAttribute("opacity",st.barOp.toFixed(3));
+    ceilG.setAttribute("opacity",st.barOp.toFixed(3));
+    hleG.setAttribute("opacity",st.hleOp.toFixed(3));
+    var hw=(Xb(hle.age)-pxL)*hle.p;
+    hle.rect.setAttribute("width",Math.max(0,hw).toFixed(2));
+    hle.barLab.setAttribute("x",(pxL+hw-7).toFixed(2));
+    hle.barLab.setAttribute("opacity",(hle.p>0.6?1:0));
+    hle.dash.setAttribute("opacity",(st.dashOp*(hle.p>0.97?1:0)).toFixed(3));
+    hle.open.setAttribute("opacity",(st.dashOp*(hle.p>0.97?1:0)).toFixed(3));
+  }
+
+  var lastT=0;
+  function frame(now){
+    if(!lastT) lastT=now; var dt=Math.min(0.05,(now-lastT)/1000); lastT=now;
+    var elapsed=now-sceneT0, CSTAG=170, BSTAG=130;
+    // curve draw progress, staggered on entry to scene 2
+    st.m0=approach(st.m0,st.m0T,6.5,dt);
+    var r1=!staggerCurves||elapsed>=0, r2=!staggerCurves||elapsed>=CSTAG;
+    st.m1=approach(st.m1,(r1?st.m1T:0),5.5,dt);
+    st.m2=approach(st.m2,(r2?st.m2T:0),5.5,dt);
+    st.calOp=approach(st.calOp,st.calOpT,7,dt);
+    st.barOp=approach(st.barOp,st.barOpT,7,dt);
+    st.hleOp=approach(st.hleOp,st.hleOpT,7,dt);
+    st.dashOp=approach(st.dashOp,st.dashOpT,6,dt);
+    // brackets ride a light spring so the morph settles rather than snaps
+    var sp=170, zeta=0.86, c=2*Math.sqrt(sp)*zeta;
+    for(var k=0;k<tests.length;k++){
+      var T=tests[k];
+      var released=!staggerBars||(elapsed>=k*BSTAG);
+      var gx=released?T.gT.x:T.g.x, gw=released?T.gT.w:T.g.w, gyy=released?T.gT.y:T.g.y, gh=released?T.gT.h:T.g.h;
+      var fx=(-sp*(T.g.x-gx))-(c*T.vx); T.vx+=fx*dt; T.g.x+=T.vx*dt;
+      var fw=(-sp*(T.g.w-gw))-(c*T.vw); T.vw+=fw*dt; T.g.w+=T.vw*dt;
+      var fy=(-sp*(T.g.y-gyy))-(c*T.vy); T.vy+=fy*dt; T.g.y+=T.vy*dt;
+      var fh=(-sp*(T.g.h-gh))-(c*T.vh); T.vh+=fh*dt; T.g.h+=T.vh*dt;
+      T.g.op=approach(T.g.op,T.gT.op,8,dt);
+    }
+    var fp=(-sp*(hle.p-hle.pT))-(c*hle.vp); hle.vp+=fp*dt; hle.p+=hle.vp*dt; if(hle.p<0)hle.p=0;
+    applyChart();
+    requestAnimationFrame(frame);
+  }
+
+  // ----- scenes (chart state + the figures shown above the chart) -----
+  var scenes=[
+    { chart:0, figs:[{v:"43.9%",l:"best model, 2020",c:C.gray},{v:"92.3%",l:"best model, 2024",c:C.ink},{v:"48 mo",l:"release to solved",c:C.foil}] },
+    { chart:1, figs:[{v:"17 mo",l:"the 2021 math test",c:C.foil},{v:"24 mo",l:"the 2023 science test",c:C.foil}] },
+    { chart:2, figs:[{v:"48 mo",l:"the 2020 exam",c:C.gray},{v:"24 mo",l:"the ceiling since",c:C.foil}] },
+    { chart:3, figs:[{v:"19 mo",l:"the 2025 exam, so far",c:C.emerald},{v:"53%",l:"already climbed",c:C.foil}] }
+  ];
+  var N=scenes.length;
+  var figsEl=document.getElementById('figs'), dotsEl=document.getElementById('dots');
+  var prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+  var caps=[].slice.call(document.querySelectorAll('.cap'));
+  var stageEl=document.getElementById('stage');
+
+  function figsHTML(i){ var f=scenes[i].figs, o=""; for(var j=0;j<f.length;j++){ o+='<div class="fig"><span class="v" style="color:'+rgb(f[j].c)+'">'+f[j].v+'</span><span class="l">'+f[j].l+'</span></div>'; } return o; }
+
+  var dots=[];
+  for(i=0;i<N;i++){ (function(k){ var b=document.createElement('button'); b.type='button'; b.className='dot'; b.setAttribute('aria-label','Go to scene '+(k+1)); b.addEventListener('click',function(){ show(k); }); dotsEl.appendChild(b); dots.push(b); })(i); }
+
+  var idx=0, swapT=null;
+  function show(i){
+    i=Math.max(0,Math.min(N-1,i)); idx=i;
+    setChart(scenes[idx].chart);
+    for(var k=0;k<dots.length;k++){ dots[k].classList.toggle('is-on',k===idx); }
+    prevBtn.disabled=(idx===0); nextBtn.disabled=(idx===N-1);
+    if(reduce){
+      figsEl.innerHTML=figsHTML(idx);
+      for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+    } else {
+      figsEl.style.opacity=0;
+      if(swapT) clearTimeout(swapT);
+      swapT=setTimeout(function(){
+        figsEl.innerHTML=figsHTML(idx); figsEl.style.opacity=1;
+        for(var m=0;m<caps.length;m++){ caps[m].classList.toggle('is-on',m===idx); }
+      },160);
+    }
+  }
+
+  prevBtn.addEventListener('click',function(){ show(idx-1); });
+  nextBtn.addEventListener('click',function(){ show(idx+1); });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key==='PageDown'){ show(idx+1); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ show(idx-1); }
+  });
+  var x0=null;
+  stageEl.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+  stageEl.addEventListener('touchend',function(e){ if(x0===null) return; var dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40){ show(dx<0?idx+1:idx-1); } x0=null; },{passive:true});
+
+  // ----- init -----
+  if(reduce){ setChart(0); snap(); applyChart(); } else { requestAnimationFrame(frame); }
+  figsEl.innerHTML=figsHTML(0);
+  caps[0].classList.add('is-on');
+  dots[0].classList.add('is-on');
+  setChart(scenes[0].chart);
+  prevBtn.disabled=true; nextBtn.disabled=(N<=1);
+})();
+</script>
+<!--CHROME:FOOTER-->
+</body>
+</html>
