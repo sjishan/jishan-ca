@@ -115,9 +115,11 @@ for(const p of pieces){
 // ---- assets passthrough ----
 if(existsSync(ASSETS)) cpSync(ASSETS, join(DIST, 'assets'), { recursive: true });
 
-// Icons that crawlers probe at the site root by convention (Google's /favicon.ico,
-// iOS /apple-touch-icon.png). Mirror them from assets/ to the dist root.
-for(const f of ['favicon.ico', 'apple-touch-icon.png']){
+// Files that must live at the site root by convention: icons crawlers probe
+// (Google's /favicon.ico, iOS /apple-touch-icon.png) and the Webpushr service
+// worker (must be same-origin at the root to control the whole site's scope).
+// Mirror them from assets/ to the dist root.
+for(const f of ['favicon.ico', 'apple-touch-icon.png', 'webpushr-sw.js']){
   const src = join(ASSETS, f);
   if(existsSync(src)) cpSync(src, join(DIST, f));
 }
