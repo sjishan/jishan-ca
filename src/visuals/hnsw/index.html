@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why doesn't HNSW have to check every vector?</title>
+<meta name="description" content="Checking every stored vector gives the exact nearest neighbor, but the work grows with the index. Watch HNSW use sparse upper layers to avoid measuring most vectors.">
+<link rel="canonical" href="https://jishan.ca/visuals/hnsw">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Why doesn't HNSW have to check every vector?">
+<meta property="og:description" content="Checking every stored vector gives the exact nearest neighbor, but the work grows with the index. Watch HNSW use sparse upper layers to avoid measuring most vectors.">
+<meta property="og:url" content="https://jishan.ca/visuals/hnsw">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Why doesn't HNSW have to check every vector?">
+<meta name="twitter:description" content="Checking every stored vector gives the exact nearest neighbor, but the work grows with the index. Watch HNSW use sparse upper layers to avoid measuring most vectors.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FFFFFF;--pine:#0C6A52;--pine-dk:#08493A;--foil:#8C2240;--foil-dk:#5F1830;
+  --ink:#181A15;--axis:#2A2D24;--muted:#6A6F64;--inert:#A7ABA1;--grid:#E3E6DF;
+  --pine-mist:#F1F7F4;--pine-soft:#CBDFD6;--pine-mid:#9CC3B6;--foil-soft:#F7E6E2;
+  --sans:"IBM Plex Sans",Arial,sans-serif;--mono:"IBM Plex Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:18px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:56px 28px 80px}
+
+h1{font-family:var(--sans);font-weight:700;font-size:clamp(30px,6.6vw,74px);line-height:1.06;letter-spacing:-0.03em;margin:0 0 24px}
+h1 .accent{color:var(--pine)}
+h1 .accent.cost{color:var(--foil)}
+.standfirst{color:var(--muted);font-size:20px;line-height:1.55;margin:0 0 14px}
+.dateline{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);margin:0 0 20px;letter-spacing:.01em;display:flex;flex-wrap:wrap;gap:4px 26px}
+.dateline .sep{color:var(--inert);padding:0 6px}
+
+.sec{margin:66px 0 0;scroll-margin-top:24px}
+.sec > h2{font-size:30px;font-weight:700;color:var(--pine-dk);margin:0 0 16px;line-height:1.2;letter-spacing:-0.015em}
+.sec .step{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;letter-spacing:.04em;color:var(--muted);margin:0 0 10px}
+.sec .step b{font-weight:600;color:var(--pine)}
+.sec p{margin:0 0 15px;max-width:74ch}
+.sec p .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--foil)}
+.sec p .str{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--pine)}
+.term{font-weight:600;color:var(--pine-dk)}
+
+.fig{margin:22px 0 0}
+html{scroll-behavior:smooth}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.toc{margin:26px 0 0;padding:16px 0 0;border-top:1px solid var(--grid)}
+.toc .toclab{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--pine);margin:0 0 8px}
+.toc ol{margin:0;padding:0;list-style:none;counter-reset:toc;display:flex;flex-wrap:wrap;gap:9px 26px}
+.toc li{counter-increment:toc;font-size:15px;line-height:1.3;display:flex;align-items:baseline;gap:7px}
+.toc li::before{content:counter(toc,decimal-leading-zero);font-family:var(--mono);font-size:12px;color:var(--inert)}
+.toc a{color:var(--pine-dk);text-decoration:none;border-bottom:1px solid var(--pine-soft)}
+.toc a:hover{border-bottom-color:var(--pine)}
+.toc a:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+
+.figwrap{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:30px;align-items:start}
+.figside{padding-top:4px}
+.figside .clab{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--pine);margin:0}
+.figside .cnum{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:44px;font-weight:600;color:var(--foil);line-height:1.02;margin:4px 0 0}
+.figside .cof{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted);margin:2px 0 18px}
+.fignote{font-size:15px;line-height:1.5;color:var(--ink);margin:0}
+.figcap{font-size:16px;line-height:1.55;color:var(--muted);margin:14px 0 0;max-width:78ch}
+.hbar{display:grid;grid-template-columns:1fr;gap:4px;margin:14px 0 0}
+.hbar .hlab{font-size:13px;font-weight:600;color:var(--muted)}
+.hbar .htrack{height:14px;background:var(--grid);border-radius:3px;overflow:hidden}
+.hbar .hfill{display:block;height:100%;width:0;border-radius:3px;transition:width 220ms ease}
+.hbar .hfill.scan{background:var(--inert)}
+.hbar .hfill.walk{background:var(--foil)}
+.hbar .hnum{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:26px;font-weight:600;color:var(--axis)}
+.hbar .hnum.foil{color:var(--foil)}
+.hstat{margin:26px 0 0;line-height:1.15}
+.hstat b{display:block;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:56px;font-weight:600;color:var(--pine)}
+.hstat span{display:block;font-size:14px;color:var(--muted);margin-top:4px;max-width:22ch}
+.census{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:8px;margin:7px 0 0;font-size:12px;color:var(--muted)}
+.census .ctrack{height:10px;background:var(--grid);border-radius:2px;overflow:hidden}
+.census .cfill{display:block;height:100%;border-radius:2px;background:var(--pine)}
+.census .cfill.base{background:var(--pine-mid)}
+.census .cval{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--axis)}
+@media(max-width:820px){.figwrap{grid-template-columns:minmax(0,1fr)}.figside{padding-top:0}}
+.fig.hero{margin:24px 0 0}
+.lede{font-size:19px;line-height:1.6;color:var(--ink);margin:20px 0 0;max-width:74ch}
+.takeaway{font-size:19px;line-height:1.5;color:var(--pine-dk);font-weight:600;margin:0 0 28px;max-width:70ch;border-left:3px solid var(--pine-soft);padding-left:16px}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:2px 7px;border-radius:2px;margin-right:9px}
+.tag.prob{background:var(--foil-soft);color:var(--foil-dk)}
+.tag.fix{background:var(--pine-mist);color:var(--pine-dk)}
+.fig svg{width:100%;display:block;background:var(--paper);border:1px solid var(--grid);border-radius:3px;touch-action:none}
+.fig svg:focus-visible{outline:2px solid var(--pine);outline-offset:3px}
+.figbar{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin:12px 0 0}
+.figbar .grp{display:flex;align-items:center;gap:9px}
+.figbar label{font-size:11.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.figbar .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--axis)}
+.figbar input[type=range]{-webkit-appearance:none;appearance:none;width:170px;height:18px;background:transparent;margin:0}
+.figbar input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--grid);border-radius:2px}
+.figbar input[type=range]::-moz-range-track{height:3px;background:var(--grid);border-radius:2px}
+.figbar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;background:var(--pine);border:none;margin-top:-6px;cursor:pointer}
+.figbar input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--pine);border:none;cursor:pointer}
+.figbar input[type=range]:focus-visible{outline:2px solid var(--pine);outline-offset:3px;border-radius:3px}
+.figbar .hint{font-size:13.5px;color:var(--muted)}
+
+button.pill{font-family:var(--sans);font-size:13.5px;font-weight:600;border-radius:999px;padding:7px 15px;cursor:pointer;border:1px solid var(--pine);background:var(--paper);color:var(--pine);transition:background 180ms ease,color 180ms ease}
+button.pill:hover{background:var(--pine-mist)}
+button.pill.solid{background:var(--pine);color:var(--paper)}
+button.pill.solid:hover{background:var(--pine-dk);border-color:var(--pine-dk)}
+button.pill.cost{border-color:var(--foil);color:var(--foil)}
+button.pill.cost:hover{background:var(--foil-soft)}
+button.pill.cost[aria-pressed=true]{background:var(--foil);color:var(--paper)}
+button.pill:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+button.pill[disabled]{border-color:var(--inert);color:var(--inert);cursor:not-allowed}
+
+.legend{display:flex;flex-wrap:wrap;gap:18px;margin:12px 0 0;padding:0;list-style:none;font-size:13px;color:var(--muted)}
+.legend li{display:flex;align-items:center;gap:8px}
+.chip{width:14px;height:9px;border-radius:2px;flex:none}
+.chip.dot{background:var(--pine-mid);border:1px solid var(--pine)}
+.chip.hit{background:var(--foil)}
+.chip.path{background:transparent;border-top:2px solid var(--foil);height:0;border-radius:0}
+.chip.found{background:var(--pine-dk)}
+.chip.miss{background:transparent;border:2px dashed var(--foil);height:12px;width:12px;border-radius:50%}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:26px;align-items:start;margin:22px 0 0}
+.stagecol{min-width:0}
+.stage{width:100%;display:block;background:var(--paper);border:1px solid var(--grid);border-radius:3px;touch-action:none}
+.stage:focus-visible{outline:2px solid var(--pine);outline-offset:3px}
+.deck{position:sticky;top:22px;display:flex;flex-direction:column;gap:16px}
+.kicker{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0}
+.kicker b{font-weight:700}
+.decktitle{font-size:21px;font-weight:700;color:var(--pine-dk);margin:-8px 0 0;line-height:1.24}
+.readout{font-size:15px;line-height:1.6;margin:0}
+.readout .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--foil)}
+.readout .s{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;color:var(--pine)}
+.controls{display:flex;flex-direction:column;gap:13px}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:11.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin:0 0 5px}
+.ctl .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--axis);letter-spacing:0}
+.ctl input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;background:transparent;margin:0;display:block}
+.ctl input[type=range]::-webkit-slider-runnable-track{height:3px;background:var(--grid);border-radius:2px}
+.ctl input[type=range]::-moz-range-track{height:3px;background:var(--grid);border-radius:2px}
+.ctl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border-radius:50%;background:var(--pine);border:none;margin-top:-6px;cursor:pointer}
+.ctl input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--pine);border:none;cursor:pointer}
+.ctl input[type=range]:focus-visible{outline:2px solid var(--pine);outline-offset:3px;border-radius:3px}
+.bars{display:flex;flex-direction:column;gap:7px}
+.bar{display:grid;grid-template-columns:78px 1fr auto;align-items:center;gap:9px;font-size:12px;color:var(--muted)}
+.bar .track{height:8px;background:var(--grid);border-radius:2px;overflow:hidden}
+.bar .fill{height:100%;width:0;border-radius:2px;transition:width 200ms ease}
+.bar .fill.walk{background:var(--foil)}
+.bar .fill.scan{background:var(--inert)}
+.bar .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px;color:var(--axis)}
+.exps{display:flex;flex-direction:column;gap:6px}
+.exps h3{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0 0 3px}
+.exp{text-align:left;font-family:var(--sans);font-size:14px;line-height:1.45;background:var(--paper);color:var(--pine-dk);border:1px solid var(--pine-soft);border-radius:3px;padding:8px 11px;cursor:pointer;font-weight:600;transition:background 180ms ease}
+.exp:hover{background:var(--pine-mist)}
+.exp[aria-pressed=true]{background:var(--pine);border-color:var(--pine);color:var(--paper)}
+.exp:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+.expnote{font-size:14px;line-height:1.55;margin:8px 0 0}
+.expnote .ask{color:var(--pine);font-weight:600}
+.dots{display:flex;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.dots li{width:7px;height:7px;border-radius:50%;background:var(--grid)}
+.dots li.on{background:var(--pine)}
+.runrow{display:flex;flex-wrap:wrap;gap:8px}
+
+footer.credit{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:56px 0 0;padding:16px 0 0;border-top:1px solid var(--grid);font-size:13.5px;color:var(--muted)}
+footer.credit a{color:var(--pine);text-decoration:none;border-bottom:1px solid var(--pine-soft)}
+footer.credit a:hover{border-bottom-color:var(--pine)}
+.credit{display:flex;flex-wrap:wrap;gap:4px 20px}
+.li{display:flex;align-items:center;gap:8px}
+
+.method{margin:46px 0 0;max-width:74ch}
+.method h2{font-size:21px;font-weight:700;color:var(--pine-dk);margin:0 0 12px}
+.method h3{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:26px 0 8px}
+.method p{margin:0 0 12px;font-size:15.5px;line-height:1.62}
+.method p.note{color:var(--muted)}
+.method ul{margin:0;padding:0;list-style:none}
+.method li{margin:0 0 14px;font-size:15px;line-height:1.55}
+.method li .work{font-weight:600;color:var(--ink)}
+.method li .who{font-family:var(--mono);font-size:13px;color:var(--axis)}
+.method li .why{display:block;color:var(--muted);font-size:14.5px}
+.method a{color:var(--pine);text-decoration:none;border-bottom:1px solid var(--pine-soft)}
+.method a:hover{border-bottom-color:var(--pine)}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+@media (max-width:940px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .deck{position:static}
+  .wrap{padding:38px 20px 60px}
+  .sec{margin:48px 0 0}
+}
+@media (prefers-reduced-motion:reduce){*{transition-duration:1ms!important;animation-duration:1ms!important}}
+</style>
+<!--CHROME:HEAD-->
+</head>
+<body>
+<!--CHROME:HEADER-->
+<main class="wrap">
+
+  <h1>Why doesn't HNSW have to <span class="accent cost">check every vector</span>?</h1>
+  <p class="standfirst">A vector database can always find the stored vector nearest to your query by measuring every vector, but that makes the work grow with the index. Run the comparison below and watch HNSW use sparse upper layers to get close first, then return the same answer after 46 distance checks in this 1,500-vector example.</p>
+  <p class="dateline"><span>Published <time datetime="2026-08-10">August 10, 2026</time></span><span>Updated <time datetime="2026-08-12">August 12, 2026</time></span></p>
+
+  <div class="fig hero">
+    <div class="figwrap">
+      <svg id="fhero" viewBox="0 0 640 640" role="img" aria-labelledby="fherot"><title id="fherot">One thousand five hundred stored vectors on a map. A full scan measures all of them, while HNSW measures forty six and returns the same vector.</title></svg>
+      <div class="figside">
+        <p class="clab">Two ways to answer</p>
+        <div class="hbar"><span class="hlab">Check every vector</span><span class="htrack"><span class="hfill scan" id="hb1"></span></span><span class="hnum" id="hn1">1,500</span></div>
+        <div class="hbar"><span class="hlab">HNSW</span><span class="htrack"><span class="hfill walk" id="hb2"></span></span><span class="hnum foil" id="hn2">46</span></div>
+        <p class="hstat"><b id="hpct">97%</b><span>of the index never measured, in this run</span></p>
+      </div>
+    </div>
+    <p class="figcap" id="fheroc"></p>
+    <div class="figbar"><button class="pill solid" type="button" id="heroRun">Run the comparison again</button><span class="hint">Both runs return the same vector.</span></div>
+  </div>
+  <nav class="toc" aria-label="On this page">
+      <p class="toclab">Jump to</p>
+      <ol>
+        <li><a href="#s1">Every answer costs a full scan</a></li>
+        <li><a href="#s2">Link the vectors together</a></li>
+        <li><a href="#s3">The search gets stuck</a></li>
+        <li><a href="#s4">Short links, then long ones</a></li>
+        <li><a href="#s5">Put the long links on their own layers</a></li>
+        <li><a href="#s6">The playground</a></li>
+      </ol>
+    </nav>
+  <p class="lede">In that run HNSW measured 46 of the 1,500 vectors and returned the same nearest vector as the full scan. The next five steps show why that can happen, and the sixth lets you change the settings yourself.</p>
+
+  <!-- 1 -->
+  <section class="sec" id="s1">
+    <p class="step">Step <b>1</b> / 6</p>
+    <h2>Every answer costs a full scan</h2>
+    <p>A vector database stores vectors, i.e. lists of numbers produced by a model from text, images, or other data. You can treat each vector as a point in space. When you give the database a new query vector, the job is to find the stored vector closest to it. That stored vector is the <span class="term">nearest neighbor</span>.</p>
+    <p>The most direct method always returns the right answer. Measure the distance from your query to every stored vector and keep the smallest distance. Each measurement is one <span class="term">distance check</span>, i.e. what the papers call a distance computation. That is the unit of cost used throughout this page.</p>
+    <p class="takeaway">With <span class="str">500</span> stored vectors, a full scan costs exactly <span class="str">500</span> distance checks.</p>
+    <p>Drag the query anywhere on the map, then press Check every vector. The counter will climb to <span class="str">500</span> because every stored vector has to be measured.</p>
+    <div class="fig">
+      <div class="figwrap">
+      <svg id="f1" viewBox="0 0 640 640" role="img" aria-labelledby="f1t" tabindex="-1"><title id="f1t">Five hundred stored vectors on a map. You can drag the query and run a full scan that measures every vector.</title></svg>
+      <div class="figside">
+        <p class="clab">Distance checks</p>
+        <p class="cnum" id="f1n">0</p>
+        <p class="cof" id="f1o">of 500</p>
+        <p class="fignote" id="f1p"></p>
+      </div>
+    </div>
+    <p class="figcap" id="f1c"></p>
+      <div class="figbar">
+        <button class="pill cost" type="button" id="f1scan">Check every vector</button>
+        <button class="pill" type="button" id="f1reset">Reset</button>
+        <span class="hint">Drag the query, or focus it and use the arrow keys.</span>
+      </div>
+      <ul class="legend">
+        <li><span class="chip dot"></span> stored vector</li>
+        <li><span class="chip hit"></span> distance checked</li>
+        <li><span class="chip found"></span> the nearest vector</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="sec" id="s2">
+    <p class="step">Step <b>2</b> / 6</p>
+    <h2>Link the vectors together, then search by moving between them</h2>
+    <p>Now join each vector to its four nearest vectors. Those connections turn the points into a <span class="term">graph</span>. Each point is a <span class="term">node</span>, each connection is a <span class="term">link</span>, and the nodes connected to one node are its <span class="term">neighbors</span>.</p>
+    <p>Once the vectors are linked, you can search by moving through the graph instead of measuring every vector. The search begins from the same fixed node each time, called the <span class="term">entry point</span>. In this figure, the entry point sits in the bottom left corner.</p>
+    <p>The search follows one rule. Start on a node and measure the distance from the query to each of its neighbors. Move to the neighbor closest to the query, then repeat from there. Stop when none of the current node's neighbors is closer to the query than the current node itself. The node where you stop is the answer.</p>
+    <p>This is a <span class="term">greedy search</span>, because each step chooses the neighbor that looks best right now. It never checks whether a step that looks worse now could lead to a better node later.</p>
+    <p>Press Advance one hop to run the rule one step at a time. The hollow rings mark the neighbors being measured, and the search moves to the closest one.</p>
+    <p class="takeaway">For this query, the search reaches the answer after <span class="num">29</span> hops and <span class="num">80</span> distance checks, instead of the <span class="str">500</span> checks a full scan would use.</p>
+    <div class="fig">
+      <div class="figwrap">
+      <svg id="f2" viewBox="0 0 640 640" role="img" aria-labelledby="f2t" tabindex="-1"><title id="f2t">The same five hundred vectors, each joined to its four nearest vectors. You can advance the greedy search one hop at a time.</title></svg>
+      <div class="figside">
+        <p class="clab">Distance checks</p>
+        <p class="cnum" id="f2n">0</p>
+        <p class="cof" id="f2o">of 500</p>
+        <p class="fignote" id="f2p"></p>
+      </div>
+    </div>
+    <p class="figcap" id="f2c"></p>
+      <div class="figbar">
+        <button class="pill solid" type="button" id="f2next">Advance one hop</button>
+        <button class="pill" type="button" id="f2all">Run to the end</button>
+        <button class="pill" type="button" id="f2reset">Reset</button>
+        <span class="hint">Drag the query to run the search from somewhere else.</span>
+      </div>
+      <ul class="legend">
+        <li><span class="chip dot"></span> stored vector</li>
+        <li><span class="chip hit"></span> distance checked</li>
+        <li><span class="chip path"></span> the search so far</li>
+        <li><span class="chip found"></span> where the search is now</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="sec" id="s3">
+    <p class="step">Step <b>3</b> / 6</p>
+    <h2>The walk gets stuck, so keep more than one candidate</h2>
+    <p>Greedy search has a failure case. Sometimes none of the current node's neighbors is closer to the query even though a better vector exists elsewhere in the graph. That current node is a <span class="term">local minimum</span>, i.e. every neighbor is farther from the query, so a one-candidate search has nowhere better to move and stops with the wrong answer.</p>
+    <p>To get past that problem, keep the best few candidates found so far instead of only one. The number of candidates kept is the <span class="term">beam width</span>, i.e. what the HNSW paper calls ef. When the current best candidate runs out of closer neighbors, another candidate can still lead the search into a better part of the graph.</p>
+    <p>The query below is placed where a beam width of <span class="num">1</span> gets trapped. The search crosses most of the map, then stops on a vector about <span class="num">10 times</span> farther from the query than the true nearest. The dashed ring marks the true nearest. Raise the beam width and the search can reach it instead.</p>
+    <p>One query is not enough to show what a wider beam buys you, so the page also measures the same graph across the whole map. With a beam width of <span class="num">1</span>, this graph returns the true nearest <span class="num">25 percent</span> of the time and uses <span class="num">29</span> distance checks on average. With a beam width of <span class="num">8</span>, it returns the true nearest <span class="num">95 percent</span> of the time and uses <span class="num">62</span> checks on average.</p>
+    <p class="takeaway">A wider beam therefore costs more work, but it gives the search more ways to escape a local minimum.</p>
+    <div class="fig">
+      <div class="figwrap">
+      <svg id="f3" viewBox="0 0 640 640" role="img" aria-labelledby="f3t" tabindex="-1"><title id="f3t">The same graph with the query near a local minimum. A slider changes how many candidates the search keeps.</title></svg>
+      <div class="figside">
+        <p class="clab">Distance checks</p>
+        <p class="cnum" id="f3n">0</p>
+        <p class="cof" id="f3o">of 500</p>
+        <p class="fignote" id="f3p"></p>
+      </div>
+    </div>
+    <p class="figcap" id="f3c"></p>
+      <div class="figbar">
+        <div class="grp"><label for="f3ef">Beam width</label><input type="range" id="f3ef" min="1" max="8" step="1" value="1"><span class="val" id="f3efv">1</span></div>
+        <button class="pill" type="button" id="f3reset">Reset query</button>
+      </div>
+      <ul class="legend">
+        <li><span class="chip hit"></span> distance checked</li>
+        <li><span class="chip path"></span> the search</li>
+        <li><span class="chip found"></span> what the search returned</li>
+        <li><span class="chip miss"></span> the true nearest</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="sec" id="s4">
+    <p class="step">Step <b>4</b> / 6</p>
+    <h2>Short links move the search a short way, so add a few long ones</h2>
+    <p>Now there is a different problem. Every link so far joins a vector to one of its four nearest vectors, so each hop moves only a short distance across the map. When the query is far from the entry point, the search needs many short hops to get there. The query in step 2 took <span class="num">29</span> hops.</p>
+    <p>Now give every vector one extra link. Draw each extra link so that every doubling of distance gets roughly the same share, i.e. about as many links land between one and two units away as between two and four units away, and so on. These are the <span class="term">long links</span>, and they create a <span class="term">small world</span>. Work published in 2000 showed that this kind of distance rule makes greedy search efficient in a specific model, i.e. a two-dimensional lattice with local lattice connections and one directed long-range contact per node. The graph here is different because the vectors are scattered rather than placed on a lattice, and its links run both ways. So this figure borrows the same idea rather than applying that result directly.</p>
+    <p>Turn the long links on below. The search still keeps a single candidate, exactly as in step 2, but now one hop can cover much more distance.</p>
+    <p class="takeaway">For this query, the path falls from <span class="num">29</span> hops to <span class="num">4</span>, and the work falls from <span class="num">80</span> distance checks to <span class="num">34</span>.</p>
+    <div class="fig">
+      <div class="figwrap">
+      <svg id="f4" viewBox="0 0 640 640" role="img" aria-labelledby="f4t" tabindex="-1"><title id="f4t">The same graph with a control that adds one long link per vector, so you can compare how far the search travels.</title></svg>
+      <div class="figside">
+        <p class="clab">Distance checks</p>
+        <p class="cnum" id="f4n">0</p>
+        <p class="cof" id="f4o">of 500</p>
+        <p class="fignote" id="f4p"></p>
+      </div>
+    </div>
+    <p class="figcap" id="f4c"></p>
+      <div class="figbar">
+        <button class="pill cost" type="button" id="f4long" aria-pressed="false">Add long links</button>
+        <button class="pill" type="button" id="f4reset">Reset</button>
+        <span class="hint">Drag the query to compare the two somewhere else.</span>
+      </div>
+      <ul class="legend">
+        <li><span class="chip dot"></span> stored vector</li>
+        <li><span class="chip hit"></span> distance checked</li>
+        <li><span class="chip path"></span> the search</li>
+        <li><span class="chip found"></span> what the search returned</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section class="sec" id="s5">
+    <p class="step">Step <b>5</b> / 6</p>
+    <h2>Put the long links on layers of their own</h2>
+    <p>Putting long and short links in one graph helps, but every search step has to consider both kinds together. HNSW separates distance scales by placing vectors on different <span class="term">layers</span>. Sparse upper layers provide longer links, while the dense bottom layer provides shorter ones.</p>
+    <p>When a vector is added to the index, it receives a top layer chosen at random. In this build, the draw is set so that roughly one in every M vectors reaches the next layer, where M also sets how densely the graph is linked. Each higher layer therefore contains only a fraction of the vectors below it. Basically each vector rolls a weighted die when it joins, and most of them stop at layer 0, roughly one vector in six also reaches layer 1, and roughly one in six of those reaches layer 2. With <span class="str">500</span> vectors and M set to 6, layer 0 holds <span class="str">500</span>, layer 1 holds <span class="str">89</span>, layer 2 holds <span class="str">20</span>, and layer 3 holds <span class="str">1</span>.</p>
+    <p>M does two jobs in this build. First, it limits how many links a vector can keep, i.e. up to <span class="str">M</span> links on the upper layers and up to <span class="str">2M</span> on layer 0. Second, it sets how quickly the layers thin out. The paper treats these as separate settings and suggests tying them together, which is the choice used here.</p>
+    <p>Thinner layers naturally create longer links. When a layer contains fewer vectors, those vectors are farther apart, so connections between nearby vectors on that layer span more distance. Layer 0 contains every vector, so its vectors are packed more closely and its links are shorter.</p>
+    <p>The search starts at the highest layer and moves toward the query using the links available there. When no neighbor on the current layer is closer, the search keeps its current position and drops to the next layer, which contains more vectors. It repeats that process until it reaches layer 0.</p>
+    <p>Each drop gives the search a denser graph in which to make a smaller correction. By the time the search reaches layer 0, it is usually already near the query. Layer 0 is where the beam width applies, i.e. the search keeps its best few candidates there and explores from them before deciding it can stop.</p>
+    <p>HNSW still does not guarantee the true nearest vector. The search only measures vectors it reaches, so it can stop on a close vector while a closer one remains unseen. That is why HNSW is an approximate nearest neighbor method. For an index that is already built, beam width is the main setting you control at search time. Raising it makes the search do more work and makes it more likely to return the true nearest vector. How often a search returns the true nearest is what people call its <span class="term">recall</span>, and recall also depends on how the index was built, i.e. on M and on the choices made while inserting vectors.</p>
+    <p class="takeaway">With the same query and the same 500 vectors, the layered search now uses <span class="num">45</span> distance checks.</p>
+    <div class="fig">
+      <div class="figwrap">
+      <svg id="f5" viewBox="0 0 640 600" role="img" aria-labelledby="f5t" tabindex="-1"><title id="f5t">The same five hundred vectors split across layers. The search moves downward, and a census shows how many vectors sit on each layer.</title></svg>
+      <div class="figside">
+        <p class="clab">Distance checks</p>
+        <p class="cnum" id="f5n">0</p>
+        <p class="cof" id="f5o">of 500</p>
+        <p class="clab" style="margin-top:18px">Vectors on each layer</p>
+        <div id="f5census"></div>
+      </div>
+    </div>
+    <p class="figcap" id="f5c"></p>
+      <div class="figbar">
+        <div class="grp"><label for="f5m">Links per vector</label><input type="range" id="f5m" min="4" max="12" step="1" value="6"><span class="val" id="f5mv">6</span></div>
+        <button class="pill solid" type="button" id="f5run">Run the search</button>
+        <button class="pill" type="button" id="f5reset">Reset</button>
+      </div>
+      <ul class="legend">
+        <li><span class="chip dot"></span> stored vector</li>
+        <li><span class="chip hit"></span> distance checked</li>
+        <li><span class="chip path"></span> the search and its drops</li>
+        <li><span class="chip found"></span> the nearest vector</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- playground -->
+  <section class="sec" id="s6">
+    <p class="takeaway">The sparse upper layers get the search close to the query before layer 0 does the detailed work. For a fixed index, beam width controls how thoroughly layer 0 searches, i.e. how much work you spend to improve the chance of returning the true nearest vector.</p>
+    <p class="step">Step <b>6</b> / 6</p>
+    <h2>Set the controls yourself</h2>
+    <p>You have now met each control. Points sets the number of vectors in the index. Beam width sets how many candidates the search keeps on layer 0. Links per vector is M. In this build, M caps a vector at M links on the upper layers and 2M on layer 0, and it also sets how quickly the layers thin out.</p>
+    <p>Start with the first experiment. It raises the index from 500 vectors to 1,500 while leaving the query and beam width unchanged. For this one query, the search moves from <span class="num">45</span> distance checks to <span class="num">43</span>. That result shows why index size and search work do not rise one-for-one in this example.</p>
+    <div class="layout">
+      <div class="stagecol">
+        <svg class="stage" id="stage" viewBox="0 0 900 1000" role="img" aria-labelledby="stagelabel" tabindex="-1">
+          <title id="stagelabel">A stack of HNSW layers. The search moves down through the layers toward the query.</title>
+          <defs>
+            <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 z" fill="#6A6F64"></path></marker>
+            <filter id="payoffglow" x="-140%" y="-140%" width="380%" height="380%"><feGaussianBlur stdDeviation="6"></feGaussianBlur></filter>
+          </defs>
+          <g id="gWorld"></g><g id="gHair"></g><g id="gChecked"></g><g id="gTrail"></g><g id="gMarks"></g><g id="gNotes"></g><g id="gQuery"></g><g id="gHud"></g>
+        </svg>
+        <p class="figcap" id="stagec"></p>
+        <ul class="legend">
+          <li><span class="chip dot"></span> indexed vector</li>
+          <li><span class="chip hit"></span> checked this run</li>
+          <li><span class="chip path"></span> the search</li>
+          <li><span class="chip found"></span> the nearest vector</li>
+        </ul>
+      </div>
+      <aside class="deck" aria-label="Playground controls">
+        <p class="kicker" id="kicker">Layered search</p>
+        <h3 class="decktitle" id="decktitle">The walk down the layers</h3>
+        <p class="readout" id="readout"></p>
+        <div class="exps">
+          <h3>Predict, then run</h3>
+          <button class="exp" type="button" data-exp="0" aria-pressed="false">3 times the index, 3 times the work?</button>
+          <button class="exp" type="button" data-exp="1" aria-pressed="false">What happens if the beam is 1?</button>
+          <button class="exp" type="button" data-exp="2" aria-pressed="false">How many of 1,500 does it check?</button>
+          <p class="expnote" id="expnote">Make a prediction, then press one of the experiments. The sliders stay live, so you can change any setting afterwards.</p>
+          <ul class="dots" id="dots"><li></li><li></li><li></li></ul>
+        </div>
+        <div class="controls">
+          <div class="ctl"><label for="cN">Points in the index <span class="val" id="vN">500</span></label><input type="range" id="cN" min="100" max="1500" step="50" value="500"></div>
+          <div class="ctl"><label for="cEf">Beam width <span class="val" id="vEf">8</span></label><input type="range" id="cEf" min="1" max="64" step="1" value="8"></div>
+          <div class="ctl"><label for="cM">Links per vector <span class="val" id="vM">6</span></label><input type="range" id="cM" min="4" max="12" step="1" value="6"></div>
+        </div>
+        <div class="bars">
+          <div class="bar"><span>Layered walk</span><span class="track"><span class="fill walk" id="barWalk"></span></span><span class="num" id="numWalk">45</span></div>
+          <div class="bar"><span>Every point</span><span class="track"><span class="fill scan" id="barScan"></span></span><span class="num" id="numScan">500</span></div>
+        </div>
+        <div class="runrow">
+          <button class="pill solid" type="button" id="btnRun">Run the search</button>
+          <button class="pill" type="button" id="btnPlay">Pause</button>
+          <button class="pill cost" type="button" id="btnScan">Check every vector</button>
+          <button class="pill" type="button" id="btnReset">Reset</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <p class="sr" id="live" aria-live="polite"></p>
+
+  <footer class="credit">
+    <span class="credit"><span>Malkov and Yashunin, 2016</span><a href="https://arxiv.org/abs/1603.09320">arxiv.org/abs/1603.09320</a></span>
+    <span class="li">
+      <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><rect x="0" y="0" width="24" height="24" rx="4" fill="#6A6F64"></rect><path fill="#FFFFFF" d="M7.1 9.2H4.6V19h2.5V9.2zM5.85 5a1.45 1.45 0 1 0 0 2.9 1.45 1.45 0 0 0 0-2.9zM19.4 13.5c0-2.6-1.4-3.8-3.3-3.8-1.5 0-2.2.85-2.6 1.45V9.2H11V19h2.5v-5.3c0-.3.02-.6.11-.81.24-.56.75-1.14 1.63-1.14 1.15 0 1.61.86 1.61 2.13V19h2.55v-5.5z"></path></svg>
+      <a href="https://linkedin.com/in/sjishan">linkedin.com/in/sjishan</a>
+    </span>
+  </footer>
+
+  <!--SUBSCRIBE-->
+  <section class="method">
+    <h2>Sources</h2>
+    <p class="note">Two simplifications matter here. First, the vectors have two dimensions so that you can watch the search move across a map, while real embeddings often have hundreds of dimensions. The 2D view is a teaching device rather than a scale model, so the hop counts and distance-check counts here should not be read as predictions for a real index. Second, this index stops at 1,500 vectors, while production indexes can hold millions.</p>
+    <p class="note">The small end is where the layered search looks least impressive. At 100 vectors it still uses about 33 distance checks, i.e. about a third of the index. The work on any one layer is roughly bounded, while the number of layers grows slowly as the index grows. Over the 100-to-1,500 range in this playground, those effects make the total count change much less than a full scan would.</p>
+
+        <ul>
+      <li><span class="work">Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs</span>, <span class="who">Malkov and Yashunin, 2016</span>. <span class="why">The paper behind step 5 and the playground, i.e. the layered graph, the insertion procedure and the query search. <a href="https://arxiv.org/abs/1603.09320">arxiv.org/abs/1603.09320</a></span></li>
+      <li><span class="work">Approximate nearest neighbor algorithm based on navigable small world graphs</span>, <span class="who">Malkov, Ponomarenko, Logvinov and Krylov, 2014</span>. <span class="why">The single-layer predecessor used to motivate steps 2 to 4, where long links and short links live in one graph. <a href="https://doi.org/10.1016/j.is.2013.10.006">doi.org/10.1016/j.is.2013.10.006</a></span></li>
+      <li><span class="work">The small-world phenomenon: An algorithmic perspective</span>, <span class="who">Kleinberg, 2000</span>. <span class="why">The lattice result that motivates the long-link distance rule in step 4. The figure borrows the idea rather than reproducing the model exactly. <a href="https://doi.org/10.1145/335305.335325">doi.org/10.1145/335305.335325</a></span></li>
+      <li><span class="work">Skip Lists: A Probabilistic Alternative to Balanced Trees</span>, <span class="who">Pugh, 1990</span>. <span class="why">The probabilistic level idea behind the hierarchy, i.e. each higher layer keeps an exponentially smaller subset of the layer below. <a href="https://doi.org/10.1145/78973.78977">doi.org/10.1145/78973.78977</a></span></li>
+    </ul>
+  </section>
+</main>
+
+<script>
+
+/* HNSW model. One file, used by the measurement pass and inlined into the playground. */
+(function (global) {
+  'use strict';
+
+  var SEED = 20260809;
+  var MAX_N = 1500;
+  var EF_CONSTRUCTION = 32;
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* Points are drawn once for MAX_N and the first N are used, so raising N adds
+     points to the same world instead of reshuffling it. u is the per point
+     uniform that sets the top layer, held fixed so layers stay stable. */
+  function makeWorld(maxN, seed) {
+    var rnd = mulberry32(seed);
+    var xs = new Float64Array(maxN), ys = new Float64Array(maxN), us = new Float64Array(maxN);
+    for (var i = 0; i < maxN; i++) { xs[i] = rnd(); ys[i] = rnd(); us[i] = rnd(); }
+    return { xs: xs, ys: ys, us: us, maxN: maxN };
+  }
+
+  function levelOf(u, M) {
+    return Math.floor(-Math.log(Math.max(u, 1e-12)) * (1 / Math.log(M)));
+  }
+
+  function insertSorted(arr, item) {
+    var lo = 0, hi = arr.length;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (arr[mid].d < item.d) lo = mid + 1; else hi = mid; }
+    arr.splice(lo, 0, item);
+  }
+
+  function pruneFarthest(world, adj, lc, j, cap) {
+    var nb = adj[lc][j], scored = [];
+    for (var t = 0; t < nb.length; t++) {
+      var e = nb[t], dx = world.xs[e] - world.xs[j], dy = world.ys[e] - world.ys[j];
+      scored.push({ id: e, d: Math.sqrt(dx * dx + dy * dy) });
+    }
+    scored.sort(function (a, b) { return a.d - b.d; });
+    var kept = [], seen = {};
+    for (var k = 0; k < scored.length && kept.length < cap; k++) {
+      if (!seen[scored[k].id]) { seen[scored[k].id] = 1; kept.push(scored[k].id); }
+    }
+    adj[lc][j] = kept;
+  }
+
+  /* Greedy beam of one on a single layer. dfun returns the distance from the
+     target to a point id and does the counting for the caller. */
+  function greedyLayer(adj, lc, ep, dfun, onHop) {
+    var epd = dfun(ep), moved = true;
+    while (moved) {
+      moved = false;
+      var nb = adj[lc][ep] || [], best = ep, bestd = epd;
+      for (var t = 0; t < nb.length; t++) {
+        var d = dfun(nb[t]);
+        if (d < bestd) { bestd = d; best = nb[t]; }
+      }
+      if (best !== ep) { if (onHop) onHop(ep, best); ep = best; epd = bestd; moved = true; }
+    }
+    return { id: ep, d: epd };
+  }
+
+  /* Beam search on a single layer, i.e. the paper's SEARCH-LAYER. The visited
+     mark is per layer, as in the paper. onExpand reports the frontier so the
+     stage can animate it. */
+  function searchLayer(adj, lc, ep, dfun, ef, N, onExpand) {
+    var visited = new Uint8Array(N);
+    var d0 = dfun(ep);
+    visited[ep] = 1;
+    var C = [{ id: ep, d: d0 }], W = [{ id: ep, d: d0 }];
+    while (C.length) {
+      var c = C.shift();
+      if (W.length >= ef && c.d > W[W.length - 1].d) break;
+      var nb = adj[lc][c.id] || [], expanded = [];
+      for (var t = 0; t < nb.length; t++) {
+        var e = nb[t];
+        if (visited[e]) continue;
+        visited[e] = 1;
+        var d = dfun(e);
+        expanded.push(e);
+        if (W.length < ef || d < W[W.length - 1].d) {
+          insertSorted(C, { id: e, d: d });
+          insertSorted(W, { id: e, d: d });
+          if (W.length > ef) W.pop();
+        }
+      }
+      if (expanded.length && onExpand) {
+        /* the candidates the search is currently holding, best first, so a figure
+           can show what a beam actually keeps. Reporting only, nothing measured. */
+        var keep = [];
+        for (var w = 0; w < W.length; w++) keep.push({ id: W[w].id, d: W[w].d });
+        onExpand(c.id, expanded, keep);
+      }
+    }
+    return W;
+  }
+
+  function buildIndex(world, N, M) {
+    var adj = [], levels = new Int32Array(N), Mmax0 = 2 * M;
+    function ensure(l) {
+      while (adj.length <= l) {
+        var a = new Array(N);
+        for (var k = 0; k < N; k++) a[k] = null;
+        adj.push(a);
+      }
+    }
+    for (var i = 0; i < N; i++) levels[i] = levelOf(world.us[i], M);
+
+    var maxLevel = levels[0], entry = 0;
+    ensure(maxLevel);
+    for (var l0 = 0; l0 <= levels[0]; l0++) adj[l0][0] = [];
+
+    for (var i2 = 1; i2 < N; i2++) {
+      var l = levels[i2];
+      ensure(Math.max(l, maxLevel));
+      for (var k2 = 0; k2 <= l; k2++) adj[k2][i2] = [];
+
+      var dfun = function (id) {
+        var dx = world.xs[id] - world.xs[i2], dy = world.ys[id] - world.ys[i2];
+        return Math.sqrt(dx * dx + dy * dy);
+      };
+
+      var ep = entry, lc;
+      for (lc = maxLevel; lc > l; lc--) ep = greedyLayer(adj, lc, ep, dfun, null).id;
+
+      for (lc = Math.min(maxLevel, l); lc >= 0; lc--) {
+        var W = searchLayer(adj, lc, ep, dfun, EF_CONSTRUCTION, N, null);
+        var cap = (lc === 0) ? Mmax0 : M;
+        /* The paper picks neighbors with a diversity heuristic. This build links
+           to the plain M nearest instead, which the method note admits. */
+        var chosen = W.slice(0, M);
+        for (var t2 = 0; t2 < chosen.length; t2++) {
+          var j = chosen[t2].id;
+          if (j === i2) continue;
+          adj[lc][i2].push(j);
+          adj[lc][j].push(i2);
+          if (adj[lc][j].length > cap) pruneFarthest(world, adj, lc, j, cap);
+        }
+        if (adj[lc][i2].length > cap) pruneFarthest(world, adj, lc, i2, cap);
+        if (W.length) ep = W[0].id;
+      }
+      if (l > maxLevel) { maxLevel = l; entry = i2; }
+    }
+    return { adj: adj, levels: levels, maxLevel: maxLevel, entry: entry, N: N, M: M };
+  }
+
+  /* One query run. checkedOrder holds every point whose distance was computed,
+     counted once per run, which is the number the stage tracks. */
+  function runSearch(world, index, qx, qy, ef) {
+    var N = index.N, adj = index.adj;
+    var seen = new Uint8Array(N), dcache = new Float64Array(N), checkedOrder = [], trace = [];
+    /* The distance to a vector is computed once and then reused, so the number of
+       entries in checkedOrder is exactly the number of distance computations. */
+    function dfun(id) {
+      if (!seen[id]) {
+        seen[id] = 1;
+        var dx = world.xs[id] - qx, dy = world.ys[id] - qy;
+        dcache[id] = Math.sqrt(dx * dx + dy * dy);
+        checkedOrder.push(id);
+      }
+      return dcache[id];
+    }
+    /* mark is how many points had been checked when the event happened, so the
+       stage can reveal its foil dots in step with the walk. It is a reporting
+       field only, and it changes nothing the counter measures. */
+    function push(ev) { ev.mark = checkedOrder.length; trace.push(ev); }
+
+    var ep = index.entry;
+    push({ type: 'enter', layer: index.maxLevel, at: ep });
+    for (var lc = index.maxLevel; lc >= 1; lc--) {
+      (function (layer) {
+        var r = greedyLayer(adj, layer, ep, dfun, function (from, to) {
+          push({ type: 'hop', layer: layer, from: from, to: to });
+        });
+        ep = r.id;
+      })(lc);
+      push({ type: 'drop', layer: lc, at: ep });
+    }
+    var W = searchLayer(adj, 0, ep, dfun, ef, N, function (from, expanded) {
+      push({ type: 'expand', layer: 0, from: from, to: expanded });
+    });
+    var best = W.length ? W[0] : { id: ep, d: dfun(ep) };
+    push({ type: 'land', layer: 0, at: best.id });
+    return { best: best.id, bestD: best.d, checkedOrder: checkedOrder, checked: checkedOrder.length, trace: trace };
+  }
+
+  /* The honest full scan, used to learn the true nearest so a miss can be shown.
+     Its cost is never added to the counter. */
+  function trueNearest(world, N, qx, qy) {
+    var bi = 0, bd = Infinity;
+    for (var i = 0; i < N; i++) {
+      var dx = world.xs[i] - qx, dy = world.ys[i] - qy, d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; bi = i; }
+    }
+    return { id: bi, d: Math.sqrt(bd) };
+  }
+
+  /* ---------------------------------------------------------------------
+     The flat proximity graph, i.e. the predecessor structure the explainer
+     shows before layers are introduced. Everything above this line is the
+     HNSW model and is left untouched, so its measured numbers cannot move.
+     --------------------------------------------------------------------- */
+
+  /* Every point linked to its k nearest, then made symmetric, i.e. short links only. */
+  function knnGraph(world, N, k) {
+    var out = new Array(N), i, j, t;
+    for (i = 0; i < N; i++) out[i] = [];
+    var d = [];
+    for (i = 0; i < N; i++) {
+      d.length = 0;
+      for (j = 0; j < N; j++) {
+        if (j === i) continue;
+        var dx = world.xs[i] - world.xs[j], dy = world.ys[i] - world.ys[j];
+        d.push({ id: j, d: dx * dx + dy * dy });
+      }
+      d.sort(function (a, b) { return a.d - b.d; });
+      for (t = 0; t < k && t < d.length; t++) {
+        var b = d[t].id;
+        if (out[i].indexOf(b) < 0) out[i].push(b);
+        if (out[b].indexOf(i) < 0) out[b].push(i);
+      }
+    }
+    return out;
+  }
+
+  /* One extra link per point, drawn with probability proportional to one over the
+     square of the distance. In two dimensions that spreads the extra links evenly
+     across every scale, which is the condition Kleinberg showed makes a greedy
+     walk short. */
+  function addLongLinks(graph, world, N, seed) {
+    var rnd = mulberry32(seed || 7), out = new Array(N), i, j, t;
+    for (i = 0; i < N; i++) out[i] = graph[i].slice();
+    for (i = 0; i < N; i++) {
+      /* Vectors already linked to i are left out of the draw and the remaining
+         weights are renormalised, so the draw always lands on a new link. */
+      var ids = [], ws = [], tot = 0;
+      for (j = 0; j < N; j++) {
+        if (j === i) continue;
+        if (out[i].indexOf(j) >= 0) continue;
+        var dx = world.xs[i] - world.xs[j], dy = world.ys[i] - world.ys[j];
+        var d2 = dx * dx + dy * dy;
+        if (d2 < 1e-9) continue;
+        var p = 1 / d2;
+        ids.push(j); ws.push(p); tot += p;
+      }
+      if (!ids.length) continue;
+      var r = rnd() * tot, acc = 0, pick = ids[ids.length - 1];
+      for (t = 0; t < ws.length; t++) { acc += ws[t]; if (acc >= r) { pick = ids[t]; break; } }
+      out[i].push(pick);
+      if (out[pick].indexOf(i) < 0) out[pick].push(i);
+    }
+    return out;
+  }
+
+  /* The greedy walk, recorded one decision at a time so a figure can step it by
+     hand, i.e. each step holds where the walk stands, every neighbor it looked at,
+     and which of them was closest. */
+  function flatSteps(world, graph, N, entry, qx, qy) {
+    var seen = new Uint8Array(N), dcache = new Float64Array(N), checkedOrder = [], steps = [];
+    function dfun(id) {
+      if (!seen[id]) {
+        seen[id] = 1;
+        var dx = world.xs[id] - qx, dy = world.ys[id] - qy;
+        dcache[id] = Math.sqrt(dx * dx + dy * dy);
+        checkedOrder.push(id);
+      }
+      return dcache[id];
+    }
+    var at = entry, atd = dfun(at), going = true;
+    while (going) {
+      going = false;
+      var nb = graph[at] || [], best = at, bestd = atd, cand = [];
+      for (var t = 0; t < nb.length; t++) {
+        var d = dfun(nb[t]);
+        cand.push({ id: nb[t], d: d });
+        if (d < bestd) { bestd = d; best = nb[t]; }
+      }
+      steps.push({ at: at, atd: atd, cand: cand, best: best, bestd: bestd, moved: best !== at, checked: checkedOrder.length });
+      if (best !== at) { at = best; atd = bestd; going = true; }
+    }
+    var hops = 0;
+    for (var s = 0; s < steps.length; s++) if (steps[s].moved) hops++;
+    return { steps: steps, at: at, d: atd, checked: checkedOrder.length, checkedOrder: checkedOrder, hops: hops };
+  }
+
+  /* The same walk with a beam, i.e. it keeps the ef best candidates instead of one. */
+  function flatSearch(world, graph, N, entry, qx, qy, ef) {
+    var seen = new Uint8Array(N), dcache = new Float64Array(N), checkedOrder = [], trace = [];
+    function dfun(id) {
+      if (!seen[id]) {
+        seen[id] = 1;
+        var dx = world.xs[id] - qx, dy = world.ys[id] - qy;
+        dcache[id] = Math.sqrt(dx * dx + dy * dy);
+        checkedOrder.push(id);
+      }
+      return dcache[id];
+    }
+    var Wr = searchLayer([graph], 0, entry, dfun, ef, N, function (from, expanded, keep) {
+      trace.push({ type: 'expand', from: from, to: expanded, keep: keep, mark: checkedOrder.length });
+    });
+    var best = Wr.length ? Wr[0] : { id: entry, d: dfun(entry) };
+    return { best: best.id, bestD: best.d, checked: checkedOrder.length, checkedOrder: checkedOrder, trace: trace };
+  }
+
+  var api = {
+    SEED: SEED, MAX_N: MAX_N, EF_CONSTRUCTION: EF_CONSTRUCTION,
+    makeWorld: makeWorld, buildIndex: buildIndex, runSearch: runSearch,
+    trueNearest: trueNearest, levelOf: levelOf,
+    knnGraph: knnGraph, addLongLinks: addLongLinks, flatSteps: flatSteps, flatSearch: flatSearch
+  };
+  global.HNSW = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+
+</script>
+<script>
+(function () {
+'use strict';
+
+var SVGNS = 'http://www.w3.org/2000/svg';
+var C = {
+  paper: '#FFFFFF', pine: '#0C6A52', pineDk: '#08493A', foil: '#8C2240',
+  ink: '#181A15', muted: '#6A6F64', inert: '#A7ABA1', grid: '#E3E6DF',
+  mist: '#F1F7F4', soft: '#CBDFD6', mid: '#9CC3B6'
+};
+var FS = '"IBM Plex Sans", Arial, sans-serif';
+var FM = '"IBM Plex Mono", monospace';
+var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+var W = HNSW.makeWorld(HNSW.MAX_N, HNSW.SEED);
+
+/* the flat world the first four pieces run on, i.e. the same cloud the
+   playground opens with, joined to its four nearest and nothing more */
+var FN = 500, FK = 4, FE = 400, M_HERO = 6;
+var gShort = HNSW.knnGraph(W, FN, FK);
+var gLong = HNSW.addLongLinks(gShort, W, FN, 7);
+
+function $(id) { return document.getElementById(id); }
+function el(tag, a) { var n = document.createElementNS(SVGNS, tag), k; for (k in a) if (a.hasOwnProperty(k)) n.setAttribute(k, a[k]); return n; }
+function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); }
+function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function plural(n, a, b) { return n === 1 ? a : b; }
+function circleSub(x, y, r) {
+  return 'M' + (x - r).toFixed(1) + ' ' + y.toFixed(1) +
+    'a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0';
+}
+function text(g, x, y, s, opt) {
+  var a = { x: String(x), y: String(y), 'font-family': FS, 'font-size': '13.5', fill: C.muted };
+  for (var k in opt) if (opt.hasOwnProperty(k)) a[k] = opt[k];
+  var t = el('text', a); t.textContent = s; g.appendChild(t); return t;
+}
+
+/* ---------------- the flat map shared by pieces 1 to 4 ---------------- */
+
+var MX = 20, MY = 20, MS = 600;
+function fx(u) { return MX + u * MS; }
+function fy(v) { return MY + MS - v * MS; }
+function unfx(px) { return (px - MX) / MS; }
+function unfy(py) { return (MY + MS - py) / MS; }
+
+function flatFrame(svg) {
+  var g = el('g', {});
+  g.appendChild(el('rect', { x: String(MX), y: String(MY), width: String(MS), height: String(MS), fill: C.mist, 'fill-opacity': '0.55', stroke: C.grid, 'stroke-width': '1', rx: '2' }));
+  svg.appendChild(g);
+  return g;
+}
+function flatDots(N, r) {
+  var s = [];
+  for (var i = 0; i < N; i++) s.push(circleSub(fx(W.xs[i]), fy(W.ys[i]), r));
+  return s.join('');
+}
+function flatLinks(graph, N) {
+  var s = [];
+  for (var i = 0; i < N; i++) {
+    var nb = graph[i] || [];
+    for (var t = 0; t < nb.length; t++) {
+      var j = nb[t]; if (j <= i) continue;
+      s.push('M' + fx(W.xs[i]).toFixed(1) + ' ' + fy(W.ys[i]).toFixed(1) + 'L' + fx(W.xs[j]).toFixed(1) + ' ' + fy(W.ys[j]).toFixed(1));
+    }
+  }
+  return s.join('');
+}
+function checkedPath(order, upto, r) {
+  var s = [];
+  for (var i = 0; i < upto && i < order.length; i++) s.push(circleSub(fx(W.xs[order[i]]), fy(W.ys[order[i]]), r));
+  return s.join('');
+}
+/* the counter, the note and the caption are html now, so they stay readable at any width */
+function panel(id, lines) { setText(id, lines.join(' ')); }
+function drawQueryMark(g, u, v, focusable, label) {
+  var x = fx(u), y = fy(v);
+  var wrap = focusable ? el('g', { tabindex: '0', role: 'application', 'aria-label': label || 'Query position. Use the arrow keys to move it.' }) : el('g', {});
+  if (focusable) { wrap.setAttribute('class', 'qhandle'); wrap.style.cursor = 'grab'; }
+  wrap.appendChild(el('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: '13', fill: C.paper, 'fill-opacity': '0.01' }));
+  wrap.appendChild(el('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: '8', fill: 'none', stroke: C.foil, 'stroke-width': '1.8' }));
+  wrap.appendChild(el('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: '3', fill: C.foil }));
+  g.appendChild(wrap);
+  return wrap;
+}
+/* dragging and arrow keys, shared by every flat figure */
+function attachQuery(svg, get, set) {
+  var dragging = false;
+  function toSvg(evt) {
+    var r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    return { x: (evt.clientX - r.left) / r.width * vb.width, y: (evt.clientY - r.top) / r.height * vb.height };
+  }
+  function move(p) {
+    var u = Math.max(0, Math.min(1, unfx(p.x))), v = Math.max(0, Math.min(1, unfy(p.y)));
+    set(u, v);
+  }
+  svg.addEventListener('pointerdown', function (e) {
+    var p = toSvg(e);
+    if (p.x < MX - 14 || p.x > MX + MS + 14 || p.y < MY - 14 || p.y > MY + MS + 14) return;
+    dragging = true;
+    try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+    move(p);
+  });
+  svg.addEventListener('pointermove', function (e) { if (dragging) move(toSvg(e)); });
+  svg.addEventListener('pointerup', function (e) { dragging = false; try { svg.releasePointerCapture(e.pointerId); } catch (err) {} });
+  svg.addEventListener('pointercancel', function () { dragging = false; });
+  svg.addEventListener('keydown', function (e) {
+    var h = svg.querySelector('.qhandle');
+    if (!h || document.activeElement !== h) return;
+    var s = e.shiftKey ? 0.004 : 0.02, q = get(), moved = false;
+    if (e.key === 'ArrowLeft') { q.u = Math.max(0, q.u - s); moved = true; }
+    else if (e.key === 'ArrowRight') { q.u = Math.min(1, q.u + s); moved = true; }
+    else if (e.key === 'ArrowUp') { q.v = Math.min(1, q.v + s); moved = true; }
+    else if (e.key === 'ArrowDown') { q.v = Math.max(0, q.v - s); moved = true; }
+    if (!moved) return;
+    e.preventDefault();
+    set(q.u, q.v);
+    var nh = svg.querySelector('.qhandle');
+    if (nh) nh.focus();
+  });
+}
+
+/* Text inside an svg shrinks with the svg. These figures are 640 units wide and
+   can render at 350px on a phone, so a fixed size would land near 5px. Label size
+   is therefore derived from the width the browser actually gave the element. */
+var TARGET_LABEL_PX = 13;
+function unitsFor(svg, px) {
+  var w = svg.clientWidth || svg.getBoundingClientRect().width || 640;
+  var vb = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width ? svg.viewBox.baseVal.width : 640;
+  return Math.max(9, Math.min(34, px * vb / w));
+}
+function setText(id, s) { var n = $(id); if (n) n.textContent = s; }
+function setCount(pre, v, of) {
+  setText(pre + 'n', fmt(v));
+  setText(pre + 'o', 'of ' + fmt(of));
+}
+
+/* a short label tied to the thing it names, i.e. the animation should read
+   even with the captions covered up */
+var placed = [];
+function resetLabels() { placed = []; }
+function label(g, ax, ay, s2, dx, dy, color, svg) {
+  var fsz = svg ? unitsFor(svg, TARGET_LABEL_PX) : 13;
+  var w = s2.length * fsz * 0.56, h = fsz * 1.5;
+  var lim = svg && svg.viewBox.baseVal.width ? svg.viewBox.baseVal.width : 640;
+  dx = dx < 0 ? -Math.max(Math.abs(dx), fsz * 1.6) : Math.max(dx, fsz * 1.6);
+  dy = dy < 0 ? -Math.max(Math.abs(dy), fsz * 1.2) : Math.max(dy, fsz * 1.2);
+  if (dx < 0 && ax + dx - w < 6) dx = Math.abs(dx);
+  else if (dx > 0 && ax + dx + w > lim - 6) dx = -Math.abs(dx);
+  if (dy < 0 && ay + dy < fsz + 4) dy = Math.abs(dy);
+  var tx = ax + dx, ty = ay + dy;
+  /* slide down past labels already placed, rather than draw on top of them */
+  for (var i = 0; i < 8; i++) {
+    var box = { x: dx < 0 ? tx - w : tx, y: ty - h, w: w, h: h + 4 }, clash = false;
+    for (var j = 0; j < placed.length; j++) {
+      var o = placed[j];
+      if (box.x < o.x + o.w && box.x + box.w > o.x && box.y < o.y + o.h && box.y + box.h > o.y) { clash = true; break; }
+    }
+    if (!clash) { placed.push(box); break; }
+    ty += h + 3;
+    if (i === 7) return;
+  }
+  var col = color || C.muted;
+  var sx = ax + (dx > 0 ? fsz * 0.6 : -fsz * 0.6), sy = ay + (dy > 0 ? fsz * 0.6 : -fsz * 0.6);
+  /* The leader runs from the edge of the label to a point just short of the mark it
+     names, and ends in a drawn arrowhead sized to the label, so it points at the
+     thing rather than merely reaching toward it. */
+  var ex = dx < 0 ? tx + 4 : tx - 4, ey = ty - fsz * 0.32;
+  var vx = ax - ex, vy = ay - ey, len = Math.sqrt(vx * vx + vy * vy) || 1;
+  var stop = Math.min(0.999, (len - fsz * 0.7) / len);
+  var hx = ex + vx * stop, hy = ey + vy * stop;
+  var ang = Math.atan2(vy, vx), hw = fsz * 0.36;
+  g.appendChild(el('line', { x1: ex.toFixed(1), y1: ey.toFixed(1), x2: hx.toFixed(1), y2: hy.toFixed(1), stroke: col, 'stroke-width': (fsz * 0.085).toFixed(2), 'stroke-opacity': '0.9' }));
+  g.appendChild(el('path', {
+    d: 'M' + hx.toFixed(1) + ' ' + hy.toFixed(1) +
+       'L' + (hx - hw * Math.cos(ang - 0.42)).toFixed(1) + ' ' + (hy - hw * Math.sin(ang - 0.42)).toFixed(1) +
+       'L' + (hx - hw * Math.cos(ang + 0.42)).toFixed(1) + ' ' + (hy - hw * Math.sin(ang + 0.42)).toFixed(1) + 'Z',
+    fill: col, 'fill-opacity': '0.9'
+  }));
+  g.appendChild(el('rect', { x: (dx < 0 ? tx - w - 4 : tx - 4).toFixed(1), y: (ty - fsz).toFixed(1), width: (w + 8).toFixed(1), height: (fsz * 1.35).toFixed(1), rx: '2', fill: C.paper, 'fill-opacity': '0.82' }));
+  var t = el('text', { x: tx.toFixed(1), y: ty.toFixed(1), 'text-anchor': dx < 0 ? 'end' : 'start', 'font-family': FS, 'font-size': fsz.toFixed(1), 'font-weight': '600', fill: col });
+  t.textContent = s2; g.appendChild(t);
+}
+
+/* ---------------- the hero, i.e. the claim in the headline, demonstrated ---------------- */
+
+function initHero() {
+  var svg = $('fhero'), HN = 1500, HQ = { u: 0.2159, v: 0.6477 };
+  var HX = 20, HY = 20, HS = 600;
+  var hx = function (u) { return HX + u * HS; }, hy = function (v) { return HY + HS - v * HS; };
+  var hidx = HNSW.buildIndex(W, HN, M_HERO);
+  var hrun = HNSW.runSearch(W, hidx, HQ.u, HQ.v, 8);
+  var order = [];
+  for (var i = 0; i < HN; i++) order.push(i);
+  order.sort(function (a, b) { return W.xs[a] - W.xs[b]; });
+  var t0 = 0, raf = 0, playing = false;
+
+  function dotsPath(ids, upto, r) {
+    var out = [];
+    for (var i = 0; i < upto && i < ids.length; i++) out.push(circleSub(hx(W.xs[ids[i]]), hy(W.ys[ids[i]]), r));
+    return out.join('');
+  }
+  function draw(scan, hnsw, showMark) {
+    clear(svg); resetLabels();
+    svg.appendChild(el('rect', { x: String(HX), y: String(HY), width: String(HS), height: String(HS), fill: C.mist, 'fill-opacity': '0.55', stroke: C.grid, 'stroke-width': '1', rx: '2' }));
+    var base = [];
+    for (var i = 0; i < HN; i++) base.push(circleSub(hx(W.xs[i]), hy(W.ys[i]), 2.4));
+    svg.appendChild(el('path', { d: base.join(''), fill: C.mid, 'fill-opacity': '0.95' }));
+    if (scan > 0) svg.appendChild(el('path', { d: dotsPath(order, scan, 2.4), fill: C.foil, 'fill-opacity': '0.85' }));
+    if (hnsw > 0) svg.appendChild(el('path', { d: dotsPath(hrun.checkedOrder, hnsw, 5), fill: C.foil, 'fill-opacity': '0.95' }));
+    var g = el('g', {}); svg.appendChild(g);
+    var qx = hx(HQ.u), qy = hy(HQ.v);
+    if (showMark) {
+      var bpt = hrun.best, bx = hx(W.xs[bpt]), by = hy(W.ys[bpt]);
+      g.appendChild(el('circle', { cx: bx.toFixed(1), cy: by.toFixed(1), r: '10', fill: C.paper }));
+      g.appendChild(el('circle', { cx: bx.toFixed(1), cy: by.toFixed(1), r: '6.4', fill: C.pineDk }));
+      label(g, bx, by, 'the nearest vector', -24, 34, C.pineDk, svg);
+    }
+    /* a paper halo, so the query stays visible once the field turns foil */
+    g.appendChild(el('circle', { cx: qx.toFixed(1), cy: qy.toFixed(1), r: '15', fill: C.paper, 'fill-opacity': '0.9' }));
+    g.appendChild(el('circle', { cx: qx.toFixed(1), cy: qy.toFixed(1), r: '11', fill: 'none', stroke: C.foil, 'stroke-width': '2.4' }));
+    g.appendChild(el('circle', { cx: qx.toFixed(1), cy: qy.toFixed(1), r: '4', fill: C.foil }));
+    label(g, qx, qy, 'the query', 24, -22, C.foil, svg);
+
+    var b1 = $('hb1'), b2 = $('hb2');
+    if (b1) b1.style.width = (scan > 0 || hnsw > 0) ? '100%' : '0';
+    if (b2) b2.style.width = (hnsw > 0 ? Math.max(1.2, 100 * Math.min(hnsw, hrun.checked) / HN) : 0) + '%';
+    setText('hn1', fmt(HN));
+    setText('hn2', fmt(hnsw > 0 ? Math.min(hnsw, hrun.checked) : hrun.checked));
+    setText('hpct', Math.round(100 * (HN - hrun.checked) / HN) + '%');
+    var cap;
+    if (hnsw >= hrun.checked) cap = 'Both runs returned the same vector. Checking every vector took ' + fmt(HN) + ' distance checks, and HNSW took ' + fmt(hrun.checked) + '.';
+    else if (hnsw > 0) cap = 'Now run the same query with HNSW. The search measures only the vectors it reaches.';
+    else if (scan > 0) cap = 'First, measure the distance from the query to all ' + fmt(HN) + ' stored vectors.';
+    else cap = 'Press the button to compare the two.';
+    setText('fheroc', cap);
+  }
+  function run() {
+    if (reduce) { draw(HN, hrun.checked, true); return; }
+    cancelAnimationFrame(raf); playing = true; t0 = 0;
+    var step = function (now) {
+      if (!t0) t0 = now;
+      var t = (now - t0) / 1000;
+      if (t < 2.4) draw(Math.round(HN * (t / 2.4)), 0, false);
+      else if (t < 3.1) draw(HN, 0, false);
+      else if (t < 4.6) draw(0, Math.round(hrun.checked * ((t - 3.1) / 1.5)), false);
+      else { draw(0, hrun.checked, true); playing = false; return; }
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+  $('heroRun').addEventListener('click', run);
+  draw(0, 0, false);
+  run();
+  if (typeof redraws !== 'undefined') redraws.push(function () { try { draw(); } catch (e) {} });
+}
+
+/* ---------------- piece 1, the bill ---------------- */
+
+function initFig1() {
+  var svg = $('f1'), q = { u: 0.90, v: 0.70 }, scan = null, raf = 0;
+  function draw() {
+    clear(svg); resetLabels();
+    flatFrame(svg);
+    svg.appendChild(el('path', { d: flatDots(FN, 2.6), fill: C.mid, 'fill-opacity': '0.95' }));
+    var g = el('g', {}); svg.appendChild(g);
+    if (scan) {
+      g.appendChild(el('path', { d: checkedPath(scan.order, scan.at, 2.9), fill: C.foil, 'fill-opacity': '0.9' }));
+      if (scan.at >= FN) {
+        var t = HNSW.trueNearest(W, FN, q.u, q.v);
+        g.appendChild(el('circle', { cx: fx(W.xs[t.id]).toFixed(1), cy: fy(W.ys[t.id]).toFixed(1), r: '7', fill: C.paper }));
+        g.appendChild(el('circle', { cx: fx(W.xs[t.id]).toFixed(1), cy: fy(W.ys[t.id]).toFixed(1), r: '4.6', fill: C.pineDk }));
+        label(g, fx(W.xs[t.id]), fy(W.ys[t.id]), 'the nearest vector', -22, 30, C.pineDk, svg);
+      }
+    }
+    drawQueryMark(svg, q.u, q.v, true, 'Query position. Use the arrow keys to move it across the map.');
+    setCount('f1', scan ? scan.at : 0, FN);
+    if (!scan) {
+      panel('f1p', ['No distance has been measured yet. Press Check every vector and watch the counter rise once for each stored vector.']);
+      setText('f1c', 'The query and 500 stored vectors are ready, and no distance has been measured yet.');
+    } else if (scan.at < FN) {
+      panel('f1p', ['The full scan is measuring one stored vector at a time.']);
+      setText('f1c', 'The full scan has measured ' + fmt(scan.at) + ' out of ' + fmt(FN) + '.');
+    } else {
+      panel('f1p', ['All 500 vectors have been measured, so the nearest one is known exactly. The dark green mark shows it.']);
+      setText('f1c', 'The full scan used ' + fmt(FN) + ' distance checks to answer one query.');
+    }
+  }
+  function startScan() {
+    var order = [];
+    for (var i = 0; i < FN; i++) order.push(i);
+    scan = { order: order, at: 0 };
+    if (reduce) { scan.at = FN; draw(); return; }
+    cancelAnimationFrame(raf);
+    var step = function () {
+      scan.at = Math.min(FN, scan.at + 7);
+      draw();
+      if (scan.at < FN) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+  attachQuery(svg, function () { return q; }, function (u, v) { q.u = u; q.v = v; scan = null; cancelAnimationFrame(raf); draw(); });
+  $('f1scan').addEventListener('click', startScan);
+  $('f1reset').addEventListener('click', function () { q.u = 0.90; q.v = 0.70; scan = null; cancelAnimationFrame(raf); draw(); });
+  draw();
+  if (typeof redraws !== 'undefined') redraws.push(function () { try { draw(); } catch (e) {} });
+}
+
+/* ---------------- piece 2, the greedy walk, stepped by hand ---------------- */
+
+function initFig2() {
+  var svg = $('f2'), q = { u: 0.90, v: 0.70 }, walk = null, at = 0, raf = 0;
+  function recompute() { walk = HNSW.flatSteps(W, gShort, FN, FE, q.u, q.v); at = 0; }
+  function draw() {
+    clear(svg); resetLabels();
+    flatFrame(svg);
+    svg.appendChild(el('path', { d: flatLinks(gShort, FN), fill: 'none', stroke: C.soft, 'stroke-width': '0.7', 'stroke-opacity': '0.75' }));
+    svg.appendChild(el('path', { d: flatDots(FN, 2.6), fill: C.mid, 'fill-opacity': '0.95' }));
+    var g = el('g', {}); svg.appendChild(g);
+
+    var upto = at > 0 ? walk.steps[at - 1].checked : 0;
+    g.appendChild(el('path', { d: checkedPath(walk.checkedOrder, upto, 2.9), fill: C.foil, 'fill-opacity': '0.85' }));
+
+    for (var s = 0; s < at; s++) {
+      var st = walk.steps[s];
+      if (!st.moved) continue;
+      g.appendChild(el('line', {
+        x1: fx(W.xs[st.at]).toFixed(1), y1: fy(W.ys[st.at]).toFixed(1),
+        x2: fx(W.xs[st.best]).toFixed(1), y2: fy(W.ys[st.best]).toFixed(1),
+        stroke: C.foil, 'stroke-width': '2', 'stroke-linecap': 'round'
+      }));
+    }
+    /* the candidates being measured right now */
+    if (at < walk.steps.length) {
+      var cur = walk.steps[at];
+      for (var t = 0; t < cur.cand.length; t++) {
+        var cd = cur.cand[t];
+        g.appendChild(el('circle', { cx: fx(W.xs[cd.id]).toFixed(1), cy: fy(W.ys[cd.id]).toFixed(1), r: '7', fill: 'none', stroke: C.foil, 'stroke-width': '1.5', 'stroke-opacity': '0.9' }));
+      }
+      g.appendChild(el('circle', { cx: fx(W.xs[cur.at]).toFixed(1), cy: fy(W.ys[cur.at]).toFixed(1), r: '5.4', fill: C.pineDk }));
+      label(g, fx(W.xs[cur.at]), fy(W.ys[cur.at]), 'where the search is now', -20, -16, C.pineDk, svg);
+      if (cur.cand.length) {
+        var c0 = cur.cand[0];
+        label(g, fx(W.xs[c0.id]), fy(W.ys[c0.id]), 'neighbors being measured', 20, -14, C.foil, svg);
+      }
+    } else {
+      var last = walk.steps[walk.steps.length - 1];
+      var tn2 = HNSW.trueNearest(W, FN, q.u, q.v);
+      if (walk.at !== tn2.id) {
+        g.appendChild(el('circle', { cx: fx(W.xs[tn2.id]).toFixed(1), cy: fy(W.ys[tn2.id]).toFixed(1), r: '9', fill: 'none', stroke: C.foil, 'stroke-width': '2.2', 'stroke-dasharray': '4 3' }));
+        label(g, fx(W.xs[tn2.id]), fy(W.ys[tn2.id]), 'the nearest vector', 22, 28, C.foil, svg);
+      }
+      g.appendChild(el('circle', { cx: fx(W.xs[last.at]).toFixed(1), cy: fy(W.ys[last.at]).toFixed(1), r: '7', fill: C.paper }));
+      g.appendChild(el('circle', { cx: fx(W.xs[last.at]).toFixed(1), cy: fy(W.ys[last.at]).toFixed(1), r: '4.6', fill: walk.at === tn2.id ? C.pineDk : C.foil }));
+      label(g, fx(W.xs[last.at]), fy(W.ys[last.at]),
+        walk.at === tn2.id ? 'the nearest vector, where the search stopped' : 'where the search stopped', -22, 30,
+        walk.at === tn2.id ? C.pineDk : C.foil, svg);
+    }
+    /* the entry point, named once so the reader knows where the walk began */
+    g.appendChild(el('circle', { cx: fx(W.xs[FE]).toFixed(1), cy: fy(W.ys[FE]).toFixed(1), r: '4', fill: 'none', stroke: C.pineDk, 'stroke-width': '1.6' }));
+    label(g, fx(W.xs[FE]), fy(W.ys[FE]), 'the entry point', 16, -14, C.pineDk, svg);
+
+    drawQueryMark(svg, q.u, q.v, true, 'Query position. Use the arrow keys to move it across the map.');
+    label(svg, fx(q.u), fy(q.v), 'the query', 20, -16, C.foil, svg);
+    setCount('f2', upto, FN);
+    var done = at >= walk.steps.length;
+    var hopsSoFar = 0;
+    for (var i = 0; i < at; i++) if (walk.steps[i].moved) hopsSoFar++;
+    panel('f2p', done
+      ? ['The search stops here because none of this node\'s neighbors is closer to the query than the node itself.']
+      : ['The dark node is the current position. The rings mark its neighbors, and each new distance measurement costs one check.']);
+    var cap;
+    if (at === 0) cap = 'The search starts at the entry point. Press Advance one hop to measure its neighbors.';
+    else if (!done) cap = 'After ' + hopsSoFar + ' of ' + walk.hops + ' ' + plural(walk.hops, 'hop', 'hops') + ', the search has made ' + fmt(upto) + ' ' + plural(upto, 'distance check', 'distance checks') + '.';
+    else cap = 'The search used ' + walk.hops + ' ' + plural(walk.hops, 'hop', 'hops') + ' and ' + fmt(walk.checked) + ' distance checks across ' + fmt(FN) + ' stored vectors.';
+    setText('f2c', cap);
+  }
+  function next() { if (at < walk.steps.length) { at++; draw(); } }
+  function runAll() {
+    if (reduce) { at = walk.steps.length; draw(); return; }
+    cancelAnimationFrame(raf);
+    var tick = function () { if (at < walk.steps.length) { at++; draw(); raf = requestAnimationFrame(function () { setTimeout(tick, 90); }); } };
+    tick();
+  }
+  attachQuery(svg, function () { return q; }, function (u, v) { q.u = u; q.v = v; cancelAnimationFrame(raf); recompute(); draw(); });
+  $('f2next').addEventListener('click', function () { cancelAnimationFrame(raf); next(); });
+  $('f2all').addEventListener('click', runAll);
+  $('f2reset').addEventListener('click', function () { cancelAnimationFrame(raf); q.u = 0.90; q.v = 0.70; recompute(); draw(); });
+  recompute(); draw();
+  if (typeof redraws !== 'undefined') redraws.push(function () { try { draw(); } catch (e) {} });
+}
+
+/* ---------------- piece 3, the trap and the beam ---------------- */
+
+function initFig3() {
+  var svg = $('f3'), TRAP = { u: 0.8278, v: 0.7056 };
+  var q = { u: TRAP.u, v: TRAP.v }, ef = 1, res = null, truth = null;
+  function recompute() {
+    res = HNSW.flatSearch(W, gShort, FN, FE, q.u, q.v, ef);
+    truth = HNSW.trueNearest(W, FN, q.u, q.v);
+  }
+  function draw() {
+    clear(svg); resetLabels();
+    flatFrame(svg);
+    svg.appendChild(el('path', { d: flatLinks(gShort, FN), fill: 'none', stroke: C.soft, 'stroke-width': '0.7', 'stroke-opacity': '0.75' }));
+    svg.appendChild(el('path', { d: flatDots(FN, 2.6), fill: C.mid, 'fill-opacity': '0.95' }));
+    var g = el('g', {}); svg.appendChild(g);
+    for (var s = 0; s < res.trace.length; s++) {
+      var e = res.trace[s], f = { x: fx(W.xs[e.from]), y: fy(W.ys[e.from]) };
+      for (var t = 0; t < e.to.length; t++) {
+        g.appendChild(el('line', { x1: f.x.toFixed(1), y1: f.y.toFixed(1), x2: fx(W.xs[e.to[t]]).toFixed(1), y2: fy(W.ys[e.to[t]]).toFixed(1), stroke: C.foil, 'stroke-width': '1', 'stroke-opacity': '0.55' }));
+      }
+    }
+    g.appendChild(el('path', { d: checkedPath(res.checkedOrder, res.checkedOrder.length, 2.9), fill: C.foil, 'fill-opacity': '0.85' }));
+    var hit = res.best === truth.id;
+    /* the candidates the search is holding at the end, i.e. the beam made visible */
+    var keep = null;
+    for (var kk = res.trace.length - 1; kk >= 0; kk--) { if (res.trace[kk].keep) { keep = res.trace[kk].keep; break; } }
+    if (keep) {
+      for (var r2 = 0; r2 < keep.length; r2++) {
+        var kp = keep[r2], kx = fx(W.xs[kp.id]), ky = fy(W.ys[kp.id]);
+        g.appendChild(el('circle', { cx: kx.toFixed(1), cy: ky.toFixed(1), r: '11', fill: 'none', stroke: C.pine, 'stroke-width': '1.6', 'stroke-opacity': '0.9' }));
+        var num = el('text', { x: (kx + 14).toFixed(1), y: (ky - 9).toFixed(1), 'font-family': FM, 'font-size': '12', 'font-weight': '600', fill: C.pine });
+        num.textContent = '#' + (r2 + 1);
+        g.appendChild(num);
+      }
+    }
+    if (!hit) {
+      g.appendChild(el('circle', { cx: fx(W.xs[truth.id]).toFixed(1), cy: fy(W.ys[truth.id]).toFixed(1), r: '11', fill: 'none', stroke: C.foil, 'stroke-width': '2.4', 'stroke-dasharray': '4 3' }));
+      label(g, fx(W.xs[truth.id]), fy(W.ys[truth.id]), 'the true nearest vector', 24, 22, C.foil, svg);
+    }
+    g.appendChild(el('circle', { cx: fx(W.xs[res.best]).toFixed(1), cy: fy(W.ys[res.best]).toFixed(1), r: '7', fill: C.paper }));
+    g.appendChild(el('circle', { cx: fx(W.xs[res.best]).toFixed(1), cy: fy(W.ys[res.best]).toFixed(1), r: '4.6', fill: hit ? C.pineDk : C.foil }));
+    label(g, fx(W.xs[res.best]), fy(W.ys[res.best]),
+      hit ? 'what the search returned' : 'stopped here, no closer neighbor', -22, hit ? 22 : -18, hit ? C.pineDk : C.foil, svg);
+    drawQueryMark(svg, q.u, q.v, true, 'Query position. Use the arrow keys to move it across the map.');
+    setCount('f3', res.checked, FN);
+    var dx = W.xs[res.best] - q.u, dy = W.ys[res.best] - q.v;
+    var ratio = truth.d > 1e-9 ? Math.round(Math.sqrt(dx * dx + dy * dy) / truth.d) : 1;
+    panel('f3p', hit
+      ? ['The search is holding ' + ef + ' ' + plural(ef, 'candidate', 'candidates') + ', shown by green rings and rank numbers. Keeping several candidates lets it continue from another candidate when the current best path runs out.']
+      : ['The search is holding ' + ef + ' ' + plural(ef, 'candidate', 'candidates') + ', shown by the green ring. With no second candidate to try, it stops as soon as the current candidate has no closer neighbor.']);
+    var cap = hit
+      ? 'A beam width of ' + ef + ' returned the true nearest vector after ' + fmt(res.checked) + ' distance checks.'
+      : 'A beam width of ' + ef + ' stopped on a vector about ' + fmt(ratio) + ' times farther from the query than the true nearest.';
+    setText('f3c', cap);
+  }
+  attachQuery(svg, function () { return q; }, function (u, v) { q.u = u; q.v = v; recompute(); draw(); });
+  $('f3ef').addEventListener('input', function () { ef = +this.value; $('f3efv').textContent = ef; recompute(); draw(); });
+  $('f3reset').addEventListener('click', function () { q.u = TRAP.u; q.v = TRAP.v; ef = 1; $('f3ef').value = '1'; $('f3efv').textContent = '1'; recompute(); draw(); });
+  recompute(); draw();
+  if (typeof redraws !== 'undefined') redraws.push(function () { try { draw(); } catch (e) {} });
+}
+
+/* ---------------- piece 4, long links ---------------- */
+
+function initFig4() {
+  var svg = $('f4'), q = { u: 0.90, v: 0.70 }, long = false, walk = null;
+  function recompute() { walk = HNSW.flatSteps(W, long ? gLong : gShort, FN, FE, q.u, q.v); }
+  function draw() {
+    clear(svg); resetLabels();
+    flatFrame(svg);
+    var graph = long ? gLong : gShort;
+    svg.appendChild(el('path', { d: flatLinks(graph, FN), fill: 'none', stroke: C.soft, 'stroke-width': '0.7', 'stroke-opacity': long ? '0.6' : '0.75' }));
+    svg.appendChild(el('path', { d: flatDots(FN, 2.6), fill: C.mid, 'fill-opacity': '0.95' }));
+    var g = el('g', {}); svg.appendChild(g);
+    g.appendChild(el('path', { d: checkedPath(walk.checkedOrder, walk.checkedOrder.length, 2.9), fill: C.foil, 'fill-opacity': '0.85' }));
+    for (var s = 0; s < walk.steps.length; s++) {
+      var st = walk.steps[s];
+      if (!st.moved) continue;
+      g.appendChild(el('line', {
+        x1: fx(W.xs[st.at]).toFixed(1), y1: fy(W.ys[st.at]).toFixed(1),
+        x2: fx(W.xs[st.best]).toFixed(1), y2: fy(W.ys[st.best]).toFixed(1),
+        stroke: C.foil, 'stroke-width': '2.2', 'stroke-linecap': 'round'
+      }));
+    }
+    g.appendChild(el('circle', { cx: fx(W.xs[FE]).toFixed(1), cy: fy(W.ys[FE]).toFixed(1), r: '4', fill: 'none', stroke: C.pineDk, 'stroke-width': '1.6' }));
+    label(g, fx(W.xs[FE]), fy(W.ys[FE]), 'the entry point', 16, -14, C.pineDk, svg);
+    var tn4 = HNSW.trueNearest(W, FN, q.u, q.v);
+    if (walk.at !== tn4.id) {
+      g.appendChild(el('circle', { cx: fx(W.xs[tn4.id]).toFixed(1), cy: fy(W.ys[tn4.id]).toFixed(1), r: '9', fill: 'none', stroke: C.foil, 'stroke-width': '2.2', 'stroke-dasharray': '4 3' }));
+      label(g, fx(W.xs[tn4.id]), fy(W.ys[tn4.id]), 'the nearest vector', 22, 28, C.foil, svg);
+    }
+    g.appendChild(el('circle', { cx: fx(W.xs[walk.at]).toFixed(1), cy: fy(W.ys[walk.at]).toFixed(1), r: '7', fill: C.paper }));
+    g.appendChild(el('circle', { cx: fx(W.xs[walk.at]).toFixed(1), cy: fy(W.ys[walk.at]).toFixed(1), r: '4.6', fill: walk.at === tn4.id ? C.pineDk : C.foil }));
+    label(g, fx(W.xs[walk.at]), fy(W.ys[walk.at]),
+      walk.at === tn4.id ? 'the nearest vector, where the search stopped' : 'where the search stopped', -22, 30,
+      walk.at === tn4.id ? C.pineDk : C.foil, svg);
+    if (long) {
+      var longest = null, best = 0;
+      for (var z = 0; z < walk.steps.length; z++) {
+        var sz = walk.steps[z]; if (!sz.moved) continue;
+        var ddx = W.xs[sz.at] - W.xs[sz.best], ddy = W.ys[sz.at] - W.ys[sz.best];
+        var dd = ddx * ddx + ddy * ddy;
+        if (dd > best) { best = dd; longest = sz; }
+      }
+      if (longest) {
+        var mx = (fx(W.xs[longest.at]) + fx(W.xs[longest.best])) / 2;
+        var my = (fy(W.ys[longest.at]) + fy(W.ys[longest.best])) / 2;
+        label(g, mx, my, 'one long link, crossed in a single hop', 18, -14, C.foil, svg);
+      }
+    }
+    drawQueryMark(svg, q.u, q.v, true, 'Query position. Use the arrow keys to move it across the map.');
+    setCount('f4', walk.checked, FN);
+    panel('f4p', long
+      ? ['Each vector now has one extra long link, so a single hop can move much farther toward the query.']
+      : ['Each link reaches one of the four nearest vectors, so each hop moves only a short distance.']);
+    setText('f4c', (long ? 'With long links, ' : 'With short links, ') + 'the search took ' + walk.hops + ' ' +
+      plural(walk.hops, 'hop', 'hops') + ' and made ' + fmt(walk.checked) + ' distance checks.');
+  }
+  attachQuery(svg, function () { return q; }, function (u, v) { q.u = u; q.v = v; recompute(); draw(); });
+  $('f4long').addEventListener('click', function () {
+    long = !long; this.setAttribute('aria-pressed', String(long));
+    this.textContent = long ? 'Remove long links' : 'Add long links';
+    recompute(); draw();
+  });
+  $('f4reset').addEventListener('click', function () {
+    q.u = 0.90; q.v = 0.70; long = false;
+    var b = $('f4long'); b.setAttribute('aria-pressed', 'false'); b.textContent = 'Add long links';
+    recompute(); draw();
+  });
+  recompute(); draw();
+  if (typeof redraws !== 'undefined') redraws.push(function () { try { draw(); } catch (e) {} });
+}
+
+/* ---------------- piece 5, the layers ---------------- */
+
+function initFig5() {
+  var svg = $('f5'), M = 6, q = { u: 0.90, v: 0.70 };
+  var OX = 34, PW = 372, SX = 148, OY = 520, SY = 50, GAP = 96;
+  var index = null, run = null, truth = null, step = 0, reveal = 0, playing = false, raf = 0, acc = 0, last = 0;
+
+  function proj(u, v, k) { return { x: OX + u * PW + v * SX, y: OY - v * SY - k * GAP }; }
+  function pt(i, k) { return proj(W.xs[i], W.ys[i], k); }
+  function rebuild(animate) {
+    index = HNSW.buildIndex(W, FN, M);
+    var p = index.maxLevel + 1;
+    GAP = p > 1 ? Math.max(SY + 3, Math.min(112, 430 / (p - 1))) : 112;
+    doRun(animate);
+  }
+  function doRun(animate) {
+    run = HNSW.runSearch(W, index, q.u, q.v, 8);
+    truth = HNSW.trueNearest(W, FN, q.u, q.v);
+    acc = 0;
+    if (animate && !reduce) { step = 0; reveal = 0; playing = true; }
+    else { step = run.trace.length; reveal = run.checked; playing = false; }
+    draw();
+  }
+  function draw() {
+    clear(svg); resetLabels();
+    var world = el('g', {}); svg.appendChild(world);
+    for (var k = index.maxLevel; k >= 0; k--) {
+      var layer = el('g', {});
+      var a = proj(0, 0, k), b = proj(1, 0, k), c = proj(1, 1, k), d = proj(0, 1, k);
+      layer.appendChild(el('path', {
+        d: 'M' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + 'L' + b.x.toFixed(1) + ' ' + b.y.toFixed(1) + 'L' + c.x.toFixed(1) + ' ' + c.y.toFixed(1) + 'L' + d.x.toFixed(1) + ' ' + d.y.toFixed(1) + 'Z',
+        fill: C.mist, 'fill-opacity': k === 0 ? '0.92' : '0.78', stroke: C.soft, 'stroke-width': '1'
+      }));
+      text(layer, a.x - 8, a.y - 2, 'L' + k, { 'text-anchor': 'end', 'font-family': FM, 'font-size': unitsFor(svg, 11).toFixed(1), fill: C.muted });
+      if (k === index.maxLevel) label(layer, b.x, b.y, 'few vectors, longer links', 14, -8, C.pine, svg);
+      if (k === 0) label(layer, b.x, b.y, 'all vectors, shorter links', 14, 10, C.pine, svg);
+      var seg = [], dots = [];
+      for (var i = 0; i < FN; i++) {
+        if (index.levels[i] < k) continue;
+        var p = pt(i, k);
+        dots.push(circleSub(p.x, p.y, k === 0 ? 2.1 : 2.8));
+        var nb = index.adj[k][i] || [];
+        for (var t = 0; t < nb.length; t++) {
+          var j = nb[t]; if (j <= i) continue;
+          var e = pt(j, k);
+          seg.push('M' + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + 'L' + e.x.toFixed(1) + ' ' + e.y.toFixed(1));
+        }
+      }
+      layer.appendChild(el('path', { d: seg.join(''), fill: 'none', stroke: k === 0 ? C.soft : C.mid, 'stroke-width': k === 0 ? '0.5' : '0.9', 'stroke-opacity': k === 0 ? '0.55' : '0.9' }));
+      layer.appendChild(el('path', { d: dots.join(''), fill: k === 0 ? C.mid : C.pine, 'fill-opacity': '0.95' }));
+      world.appendChild(layer);
+    }
+    /* the query dropped through every layer */
+    var hair = el('g', {}); svg.appendChild(hair);
+    var top = proj(q.u, q.v, index.maxLevel), bot = proj(q.u, q.v, 0);
+    hair.appendChild(el('line', { x1: bot.x.toFixed(1), y1: bot.y.toFixed(1), x2: top.x.toFixed(1), y2: (top.y - 14).toFixed(1), stroke: C.foil, 'stroke-width': '1', 'stroke-dasharray': '3 4', 'stroke-opacity': '0.5' }));
+
+    var g = el('g', {}); svg.appendChild(g);
+    var frag = [];
+    for (var r = 0; r < reveal && r < run.checkedOrder.length; r++) {
+      var id = run.checkedOrder[r];
+      for (var kk = 0; kk <= index.levels[id]; kk++) {
+        var pp = pt(id, kk);
+        frag.push(circleSub(pp.x, pp.y, kk === 0 ? 3 : 3.3));
+      }
+    }
+    g.appendChild(el('path', { d: frag.join(''), fill: C.foil, 'fill-opacity': '0.92' }));
+    for (var s = 0; s < step; s++) {
+      var ev = run.trace[s];
+      if (ev.type === 'hop') {
+        var f1 = pt(ev.from, ev.layer), t1 = pt(ev.to, ev.layer);
+        g.appendChild(el('line', { x1: f1.x.toFixed(1), y1: f1.y.toFixed(1), x2: t1.x.toFixed(1), y2: t1.y.toFixed(1), stroke: C.foil, 'stroke-width': '2', 'stroke-linecap': 'round' }));
+      } else if (ev.type === 'drop') {
+        var u1 = pt(ev.at, ev.layer), d1 = pt(ev.at, ev.layer - 1);
+        g.appendChild(el('line', { x1: u1.x.toFixed(1), y1: u1.y.toFixed(1), x2: d1.x.toFixed(1), y2: d1.y.toFixed(1), stroke: C.foil, 'stroke-width': '1.5', 'stroke-dasharray': '2 3', 'stroke-opacity': '0.85' }));
+      } else if (ev.type === 'expand') {
+        var fe = pt(ev.from, 0);
+        for (var q2 = 0; q2 < ev.to.length; q2++) {
+          var ge = pt(ev.to[q2], 0);
+          g.appendChild(el('line', { x1: fe.x.toFixed(1), y1: fe.y.toFixed(1), x2: ge.x.toFixed(1), y2: ge.y.toFixed(1), stroke: C.foil, 'stroke-width': '0.9', 'stroke-opacity': '0.5' }));
+        }
+      }
+    }
+    if (step >= run.trace.length) {
+      var lp = pt(run.best, 0);
+      var hit5 = run.best === truth.id;
+      if (!hit5) {
+        var tp5 = pt(truth.id, 0);
+        g.appendChild(el('circle', { cx: tp5.x.toFixed(1), cy: tp5.y.toFixed(1), r: '9', fill: 'none', stroke: C.foil, 'stroke-width': '2.2', 'stroke-dasharray': '4 3' }));
+        label(g, tp5.x, tp5.y, 'the nearest vector', 22, 28, C.foil, svg);
+      }
+      g.appendChild(el('circle', { cx: lp.x.toFixed(1), cy: lp.y.toFixed(1), r: '7', fill: C.paper }));
+      g.appendChild(el('circle', { cx: lp.x.toFixed(1), cy: lp.y.toFixed(1), r: '4.6', fill: hit5 ? C.pineDk : C.foil }));
+      label(g, lp.x, lp.y, hit5 ? 'the nearest vector, where the search stopped' : 'where the search stopped',
+        -22, 30, hit5 ? C.pineDk : C.foil, svg);
+    }
+    /* the census is html now, i.e. it stays readable at any width */
+    setCount('f5', reveal, FN);
+    var counts = [], kx, ix;
+    for (kx = 0; kx <= index.maxLevel; kx++) {
+      var n = 0;
+      for (ix = 0; ix < FN; ix++) if (index.levels[ix] >= kx) n++;
+      counts.push(n);
+    }
+    var host = $('f5census');
+    if (host) {
+      var html = '';
+      for (var row = index.maxLevel; row >= 0; row--) {
+        html += '<div class="census"><span>L' + row + '</span><span class="ctrack"><span class="cfill' +
+          (row === 0 ? ' base' : '') + '" style="width:' + (100 * counts[row] / FN).toFixed(1) + '%"></span></span>' +
+          '<span class="cval">' + fmt(counts[row]) + '</span></div>';
+      }
+      host.innerHTML = html;
+    }
+    var drops = 0, hops = 0;
+    for (var z = 0; z < run.trace.length; z++) { if (run.trace[z].type === 'drop') drops++; if (run.trace[z].type === 'hop') hops++; }
+    var cap;
+    if (step < run.trace.length) cap = fmt(FN) + ' vectors across ' + (index.maxLevel + 1) + ' layers. The search is running.';
+    else cap = fmt(FN) + ' vectors across ' + (index.maxLevel + 1) + ' layers, with M set to ' + M + '. The search used ' +
+      hops + ' ' + plural(hops, 'hop', 'hops') + ', made ' + drops + ' ' + plural(drops, 'layer drop', 'layer drops') +
+      ', and used ' + fmt(run.checked) + ' distance checks.';
+    setText('f5c', cap);
+  }
+  function tick(now) {
+    raf = requestAnimationFrame(tick);
+    var dt = Math.min(64, now - (last || now)); last = now;
+    if (!playing || step >= run.trace.length) return;
+    acc += dt;
+    var dur = function (e) { return e.type === 'hop' ? 170 : e.type === 'drop' ? 280 : e.type === 'expand' ? 60 : 100; };
+    var guard = 0;
+    while (step < run.trace.length && acc >= dur(run.trace[step]) && guard < 300) {
+      acc -= dur(run.trace[step]); reveal = run.trace[step].mark; step++; guard++;
+    }
+    if (step >= run.trace.length) { reveal = run.checked; playing = false; }
+    draw();
+  }
+  /* the query is dragged on the bottom layer of the stack */
+  var dragging = false;
+  function toSvg(evt) {
+    var r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    return { x: (evt.clientX - r.left) / r.width * vb.width, y: (evt.clientY - r.top) / r.height * vb.height };
+  }
+  function moveQ(p) {
+    var v = (OY - p.y) / SY, u = (p.x - OX - v * SX) / PW;
+    q.u = Math.max(0, Math.min(1, u)); q.v = Math.max(0, Math.min(1, v));
+    doRun(false);
+  }
+  svg.addEventListener('pointerdown', function (e) {
+    var p = toSvg(e), v = (OY - p.y) / SY, u = (p.x - OX - v * SX) / PW;
+    if (u < -0.1 || u > 1.1 || v < -0.1 || v > 1.1) return;
+    dragging = true; try { svg.setPointerCapture(e.pointerId); } catch (err) {}
+    moveQ(p);
+  });
+  svg.addEventListener('pointermove', function (e) { if (dragging) moveQ(toSvg(e)); });
+  svg.addEventListener('pointerup', function (e) { dragging = false; try { svg.releasePointerCapture(e.pointerId); } catch (err) {} });
+  $('f5m').addEventListener('input', function () { M = +this.value; $('f5mv').textContent = M; rebuild(false); });
+  $('f5run').addEventListener('click', function () { doRun(true); });
+  $('f5reset').addEventListener('click', function () { M = 6; $('f5m').value = '6'; $('f5mv').textContent = '6'; q.u = 0.90; q.v = 0.70; rebuild(true); });
+  rebuild(true);
+  raf = requestAnimationFrame(tick);
+  if (typeof redraws !== 'undefined') redraws.push(function () { try { draw(); } catch (e) {} });
+}
+
+/* ---------------- the playground ---------------- */
+
+function initPlayground() {
+  var OX = 88, PW = 484, SX = 178, OY = 930, SY = 78, GAP = 215;
+  var DEF = { N: 500, M: 6, ef: 8, qx: 0.62, qy: 0.55 };
+  var st = { N: DEF.N, M: DEF.M, ef: DEF.ef, qx: DEF.qx, qy: DEF.qy };
+  var index = null, run = null, truth = null, planes = 1;
+  var reveal = 0, step = 0, playing = false, acc = 0, last = 0;
+  var scanMode = null, activeExp = -1, taken = [];
+
+  var EXPS = [
+    { N: 1500, M: 6, ef: 8, qx: 0.6200, qy: 0.5500,
+      note: 'No. The index grew from 500 vectors to 1,500 while the query, M, and beam width stayed fixed. This run moved from 45 distance checks to 43, so query work did not grow in proportion to index size.' },
+    { N: 500, M: 6, ef: 1, qx: 0.4650, qy: 0.1550,
+      note: 'With a beam width of 1, the search keeps only one candidate. Once that candidate has no closer neighbor, the search stops. The dashed ring marks the true nearest vector, which is about 31 times closer to the query than the returned vector.' },
+    { N: 1500, M: 6, ef: 8, qx: 0.2159, qy: 0.6477,
+      note: '46 of the 1,500 vectors. At this query and these settings, the upper layers bring the search close before layer 0 does the detailed search, so the other 1,454 vectors are never measured.' }
+  ];
+
+  function proj(u, v, k) { return { x: OX + u * PW + v * SX, y: OY - v * SY - k * GAP }; }
+  function unproj(px, py) {
+    var v = (OY - py) / SY, u = (px - OX - v * SX) / PW;
+    return { u: Math.max(0, Math.min(1, u)), v: Math.max(0, Math.min(1, v)), raw: { u: u, v: v } };
+  }
+  function pt(i, k) { return proj(W.xs[i], W.ys[i], k); }
+
+  function rebuild(animate) {
+    index = HNSW.buildIndex(W, st.N, st.M);
+    planes = index.maxLevel + 1;
+    GAP = planes > 1 ? Math.max(SY + 3, Math.min(215, 732 / (planes - 1))) : 215;
+    drawStatic();
+    doRun(animate);
+  }
+  function drawStatic() {
+    var g = $('gWorld'); clear(g);
+    var dotR0 = st.N > 900 ? 2.0 : 2.4;
+    for (var k = index.maxLevel; k >= 0; k--) {
+      var layer = el('g', {});
+      var a = proj(0, 0, k), b = proj(1, 0, k), c = proj(1, 1, k), d = proj(0, 1, k);
+      layer.appendChild(el('path', {
+        d: 'M' + a.x.toFixed(1) + ' ' + a.y.toFixed(1) + 'L' + b.x.toFixed(1) + ' ' + b.y.toFixed(1) + 'L' + c.x.toFixed(1) + ' ' + c.y.toFixed(1) + 'L' + d.x.toFixed(1) + ' ' + d.y.toFixed(1) + 'Z',
+        fill: C.mist, 'fill-opacity': k === 0 ? '0.92' : '0.78', stroke: C.soft, 'stroke-width': '1'
+      }));
+      text(layer, a.x - 11, a.y - 2, 'L' + k, { 'text-anchor': 'end', 'font-family': FM, 'font-size': unitsFor($('stage'), 11).toFixed(1), fill: C.muted });
+      var seg = [], dots = [];
+      for (var i = 0; i < index.N; i++) {
+        if (index.levels[i] < k) continue;
+        var p = pt(i, k);
+        dots.push(circleSub(p.x, p.y, k === 0 ? dotR0 : 2.9));
+        var nb = index.adj[k][i] || [];
+        for (var t = 0; t < nb.length; t++) {
+          var j = nb[t]; if (j <= i) continue;
+          var q = pt(j, k);
+          seg.push('M' + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + 'L' + q.x.toFixed(1) + ' ' + q.y.toFixed(1));
+        }
+      }
+      layer.appendChild(el('path', { d: seg.join(''), fill: 'none', stroke: k === 0 ? C.soft : C.mid, 'stroke-width': k === 0 ? '0.5' : '0.9', 'stroke-opacity': k === 0 ? '0.55' : '0.9' }));
+      layer.appendChild(el('path', { d: dots.join(''), fill: k === 0 ? C.mid : C.pine, 'fill-opacity': '0.95' }));
+      g.appendChild(layer);
+    }
+  }
+  function drawQuery() {
+    var gh = $('gHair'), gq = $('gQuery'); clear(gh); clear(gq);
+    var top = proj(st.qx, st.qy, index.maxLevel), bot = proj(st.qx, st.qy, 0);
+    gh.appendChild(el('line', { x1: bot.x.toFixed(1), y1: bot.y.toFixed(1), x2: top.x.toFixed(1), y2: (top.y - 18).toFixed(1), stroke: C.foil, 'stroke-width': '1', 'stroke-dasharray': '3 4', 'stroke-opacity': '0.5' }));
+    for (var k = 0; k <= index.maxLevel; k++) {
+      var p = proj(st.qx, st.qy, k);
+      gh.appendChild(el('circle', { cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: '3', fill: 'none', stroke: C.foil, 'stroke-width': '1', 'stroke-opacity': '0.5' }));
+    }
+    var g = el('g', { id: 'queryHandle', tabindex: '0', role: 'application', 'aria-label': 'Query position. Use the arrow keys to move it across the bottom layer.' });
+    g.style.cursor = 'grab';
+    g.appendChild(el('circle', { cx: bot.x.toFixed(1), cy: bot.y.toFixed(1), r: '14', fill: C.paper, 'fill-opacity': '0.01' }));
+    g.appendChild(el('circle', { cx: bot.x.toFixed(1), cy: bot.y.toFixed(1), r: '7.5', fill: 'none', stroke: C.foil, 'stroke-width': '1.7' }));
+    g.appendChild(el('circle', { cx: bot.x.toFixed(1), cy: bot.y.toFixed(1), r: '3', fill: C.foil }));
+    gq.appendChild(g);
+  }
+  function doRun(animate) {
+    scanMode = null;
+    run = HNSW.runSearch(W, index, st.qx, st.qy, st.ef);
+    truth = HNSW.trueNearest(W, st.N, st.qx, st.qy);
+    acc = 0;
+    var live = animate && !reduce;
+    if (live) { step = 0; reveal = 0; playing = true; }
+    else { step = run.trace.length; reveal = run.checked; playing = false; }
+    drawQuery();
+    $('btnPlay').disabled = false;
+    $('btnPlay').textContent = live ? 'Pause' : 'Replay';
+    renderAll(); syncDeck();
+  }
+  function isHit() { return !!(run && truth && run.best === truth.id); }
+  function bar() { return Math.ceil(0.05 * st.N); }
+  function done() { return !run || step >= run.trace.length; }
+  function payoff() { return !scanMode && done() && isHit() && run.checked <= bar(); }
+
+  function renderAll() {
+    var gt = $('gTrail'), gc = $('gChecked'), gm = $('gMarks');
+    clear(gt); clear(gc); clear(gm);
+    var frag = [];
+    for (var i = 0; i < reveal && i < run.checkedOrder.length; i++) {
+      var id = run.checkedOrder[i];
+      for (var k = 0; k <= index.levels[id]; k++) {
+        var p = pt(id, k);
+        frag.push(circleSub(p.x, p.y, k === 0 ? 2.9 : 3.3));
+      }
+    }
+    gc.appendChild(el('path', { d: frag.join(''), fill: C.foil, 'fill-opacity': '0.92' }));
+    for (var s = 0; s < step; s++) {
+      var e = run.trace[s];
+      if (e.type === 'hop') {
+        var a = pt(e.from, e.layer), b = pt(e.to, e.layer);
+        gt.appendChild(el('line', { x1: a.x.toFixed(1), y1: a.y.toFixed(1), x2: b.x.toFixed(1), y2: b.y.toFixed(1), stroke: C.foil, 'stroke-width': '2', 'stroke-linecap': 'round' }));
+      } else if (e.type === 'drop') {
+        var u = pt(e.at, e.layer), d2 = pt(e.at, e.layer - 1);
+        gt.appendChild(el('line', { x1: u.x.toFixed(1), y1: u.y.toFixed(1), x2: d2.x.toFixed(1), y2: d2.y.toFixed(1), stroke: C.foil, 'stroke-width': '1.5', 'stroke-dasharray': '2 3', 'stroke-opacity': '0.85' }));
+      } else if (e.type === 'expand') {
+        var f = pt(e.from, 0);
+        for (var t = 0; t < e.to.length; t++) {
+          var g2 = pt(e.to[t], 0);
+          gt.appendChild(el('line', { x1: f.x.toFixed(1), y1: f.y.toFixed(1), x2: g2.x.toFixed(1), y2: g2.y.toFixed(1), stroke: C.foil, 'stroke-width': '0.9', 'stroke-opacity': '0.5' }));
+        }
+      }
+    }
+    if (done() && run) {
+      var lp = pt(run.best, 0);
+      if (!isHit()) {
+        var tp = pt(truth.id, 0);
+        gm.appendChild(el('circle', { cx: tp.x.toFixed(1), cy: tp.y.toFixed(1), r: '10', fill: 'none', stroke: C.foil, 'stroke-width': '2.4', 'stroke-dasharray': '4 3' }));
+      }
+      if (payoff()) {
+        gm.appendChild(el('circle', { cx: lp.x.toFixed(1), cy: lp.y.toFixed(1), r: '13', fill: C.pine, 'fill-opacity': '0.95', filter: 'url(#payoffglow)' }));
+      }
+      gm.appendChild(el('circle', { cx: lp.x.toFixed(1), cy: lp.y.toFixed(1), r: '8', fill: C.paper }));
+      gm.appendChild(el('circle', { cx: lp.x.toFixed(1), cy: lp.y.toFixed(1), r: '5.2', fill: C.pineDk }));
+      drawNotes();
+    } else { clear($('gNotes')); }
+    drawHud();
+  }
+  function overlaps(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+  function note(anchor, lines, side) {
+    var g = $('gNotes'), i, w = 0;
+    var nu = unitsFor($('stage'), 12.5) / 12.5;
+    for (i = 0; i < lines.length; i++) w = Math.max(w, lines[i].length * 6.75 * nu);
+    var h = lines.length * 15 * nu + 6, start = side === 'right';
+    var tx = start ? anchor.x + 72 : anchor.x - 72;
+    tx = start ? Math.max(100, Math.min(884 - w, tx)) : Math.max(w + 14, Math.min(878, tx));
+    var ty = Math.max(50, Math.min(860, anchor.y - 22)), box;
+    for (i = 0; i < 9; i++) {
+      box = { x: start ? tx - 4 : tx - w - 4, y: ty - 13, w: w + 8, h: h };
+      if (!taken.some(function (o) { return overlaps(box, o); })) break;
+      ty += 30; if (ty > 860) return;
+    }
+    taken.push(box);
+    var fs2 = 12.5 * nu;
+    var nex = start ? tx - 6 : tx + 6, ney = ty + 4;
+    var nvx = anchor.x - nex, nvy = anchor.y - ney, nlen = Math.sqrt(nvx * nvx + nvy * nvy) || 1;
+    var nstop = Math.min(0.999, (nlen - fs2 * 0.7) / nlen);
+    var nhx = nex + nvx * nstop, nhy = ney + nvy * nstop;
+    var nang = Math.atan2(nvy, nvx), nhw = fs2 * 0.36;
+    g.appendChild(el('line', { x1: nex.toFixed(1), y1: ney.toFixed(1), x2: nhx.toFixed(1), y2: nhy.toFixed(1), stroke: C.muted, 'stroke-width': (fs2 * 0.085).toFixed(2), 'stroke-opacity': '0.9' }));
+    g.appendChild(el('path', {
+      d: 'M' + nhx.toFixed(1) + ' ' + nhy.toFixed(1) +
+         'L' + (nhx - nhw * Math.cos(nang - 0.42)).toFixed(1) + ' ' + (nhy - nhw * Math.sin(nang - 0.42)).toFixed(1) +
+         'L' + (nhx - nhw * Math.cos(nang + 0.42)).toFixed(1) + ' ' + (nhy - nhw * Math.sin(nang + 0.42)).toFixed(1) + 'Z',
+      fill: C.muted, 'fill-opacity': '0.9'
+    }));
+    g.appendChild(el('rect', { x: box.x.toFixed(1), y: box.y.toFixed(1), width: box.w.toFixed(1), height: box.h.toFixed(1), rx: '2', fill: C.paper, 'fill-opacity': '0.86' }));
+    for (i = 0; i < lines.length; i++) {
+      text(g, tx.toFixed(1), (ty + i * 15 * nu).toFixed(1), lines[i], { 'text-anchor': start ? 'start' : 'end', 'font-size': (12.5 * nu).toFixed(1), fill: C.muted });
+    }
+  }
+  function drawNotes() {
+    clear($('gNotes'));
+    taken = [{ x: 626, y: 34, w: 278, h: 122 }];
+    if (scanMode) return;
+    if (index.maxLevel >= 1) {
+      var ep = pt(run.trace[0].at, index.maxLevel);
+      note(ep, ['The top layer holds few vectors,', 'so nearby links on that layer reach farther.'], ep.x < 430 ? 'right' : 'left');
+      var fd = null;
+      for (var i = 0; i < run.trace.length; i++) if (run.trace[i].type === 'drop') { fd = run.trace[i]; break; }
+      if (fd) {
+        var dp = pt(fd.at, fd.layer);
+        note(dp, ['No neighbor on this layer is closer,', 'so the search drops a layer.'], dp.x < 430 ? 'right' : 'left');
+      }
+    }
+    if (isHit()) {
+      var lp = pt(run.best, 0);
+      note(lp, ['This is the nearest vector, found', 'after the last checks on layer 0.'], lp.x < 430 ? 'right' : 'left');
+    } else {
+      var tp = pt(truth.id, 0);
+      note(lp, ['The search stopped here.'], lp.x < 430 ? 'right' : 'left');
+      note(tp, ['The nearest vector is here,', 'and the search never reached it.'], tp.x < 430 ? 'right' : 'left');
+    }
+  }
+  function drawHud() {
+    var g = $('gHud'); clear(g);
+    /* The type scales with the rendered width, so the line spacing has to scale with
+       it as well, otherwise on a narrow screen the number grows up into its own
+       label. The scale is capped so the counter cannot swallow the stage. */
+    var u = Math.min(2.0, unitsFor($('stage'), 12) / 12);
+    var yLab = 46 + 20 * u, yNum = yLab + 42 * u, yOf = yNum + 20 * u;
+    text(g, 884, yLab.toFixed(0), 'DISTANCE CHECKS', { 'text-anchor': 'end', 'font-size': (11 * u).toFixed(1), 'font-weight': '600', 'letter-spacing': (1.4 * u).toFixed(2), fill: C.pine });
+    text(g, 884, yNum.toFixed(0), fmt(scanMode ? scanMode.at : reveal), { 'text-anchor': 'end', 'font-family': FM, 'font-size': (34 * u).toFixed(1), 'font-weight': '600', fill: C.foil, style: 'font-variant-numeric:tabular-nums' });
+    text(g, 884, yOf.toFixed(0), 'of ' + fmt(st.N), { 'text-anchor': 'end', 'font-family': FM, 'font-size': (12 * u).toFixed(1), fill: C.muted, style: 'font-variant-numeric:tabular-nums' });
+    setText('stagec', caption());
+  }
+  function caption() {
+    if (scanMode) return 'The full scan has measured ' + fmt(scanMode.at) + ' out of ' + fmt(st.N) + '.';
+    var drops = 0, hops = 0;
+    for (var i = 0; i < run.trace.length; i++) { if (run.trace[i].type === 'drop') drops++; if (run.trace[i].type === 'hop') hops++; }
+    var head = fmt(st.N) + ' vectors across ' + planes + ' ' + plural(planes, 'layer', 'layers') + ', with a beam width of ' + st.ef + '. ';
+    if (!done()) return head + 'The search is running.';
+    var end = isHit() ? 'stopped on the nearest vector.' : 'stopped short of the nearest vector.';
+    var walk = hops === 0
+      ? 'The search made ' + drops + ' ' + plural(drops, 'layer drop', 'layer drops') + ' without a horizontal hop, then '
+      : 'The search used ' + hops + ' ' + plural(hops, 'hop', 'hops') + ' and made ' + drops + ' ' + plural(drops, 'layer drop', 'layer drops') + ', then ';
+    return head + walk + end;
+  }
+  function syncDeck() {
+    $('vN').textContent = fmt(st.N); $('vEf').textContent = st.ef; $('vM').textContent = st.M;
+    $('kicker').innerHTML = activeExp >= 0 ? 'Experiment <b>' + (activeExp + 1) + '</b> of 3' : 'Layered search';
+    $('decktitle').textContent = scanMode ? 'The cost of measuring every vector' : 'The search through the layers';
+    var shown = scanMode ? scanMode.at : (done() ? run.checked : reveal);
+    $('numWalk').textContent = fmt(shown);
+    $('numScan').textContent = fmt(st.N);
+    $('barWalk').style.width = Math.min(100, 100 * shown / st.N).toFixed(1) + '%';
+    $('barScan').style.width = '100%';
+    $('readout').innerHTML = readout();
+    var ds = $('dots').children, i;
+    for (i = 0; i < ds.length; i++) ds[i].className = (i === activeExp) ? 'on' : '';
+    var bs = document.querySelectorAll('.exp');
+    for (i = 0; i < bs.length; i++) bs[i].setAttribute('aria-pressed', String(Number(bs[i].getAttribute('data-exp')) === activeExp));
+    $('expnote').innerHTML = activeExp >= 0 ? expNoteHtml(activeExp)
+      : 'Make a prediction, then press an experiment and compare the result. The sliders stay live, so you can change any setting afterwards.';
+    $('live').textContent = $('readout').textContent + ' ' + caption();
+  }
+  function expNoteHtml(i) { return EXPS[i].note; }
+  function distTo(i) { var dx = W.xs[i] - st.qx, dy = W.ys[i] - st.qy; return Math.sqrt(dx * dx + dy * dy); }
+  function readout() {
+    if (scanMode) {
+      if (scanMode.at < st.N) return 'The full scan has made <span class="v">' + fmt(scanMode.at) + '</span> distance checks out of <span class="s">' + fmt(st.N) + '</span>.';
+      return 'The full scan used <span class="v">' + fmt(st.N) + '</span> distance checks, i.e. one for every vector in the index. Compare that with the layered search.';
+    }
+    var c = done() ? run.checked : reveal;
+    var head = 'The layered search has made <span class="v">' + fmt(c) + '</span> distance checks across <span class="s">' + fmt(st.N) + '</span> stored ' + plural(st.N, 'vector', 'vectors');
+    if (!done()) return head + ' so far.';
+    var pct = Math.round(1000 * c / st.N) / 10, left = st.N - c;
+    if (isHit()) {
+      return head + ' and returned the true nearest vector. It measured <span class="v">' + pct + ' percent</span> of the index and never measured the other <span class="s">' + fmt(left) + '</span> ' + plural(left, 'vector', 'vectors') + '.';
+    }
+    if (truth.d < 1e-9) return head + ' and stopped short. The query sits on a vector that the search never reached.';
+    var ratio = Math.round(distTo(run.best) / truth.d);
+    if (ratio < 2) return head + ' and stopped one vector short of the true nearest. The beam width was too small to keep another candidate in play.';
+    return head + ' and stopped on a vector about <span class="v">' + fmt(ratio) + ' times</span> farther from the query than the true nearest. The beam width was too small for the search to continue from another candidate.';
+  }
+  function dur(e) { return e.type === 'hop' ? 150 : e.type === 'drop' ? 250 : e.type === 'expand' ? 55 : 90; }
+  function tick(now) {
+    requestAnimationFrame(tick);
+    var dt = Math.min(64, now - (last || now)); last = now;
+    if (scanMode) {
+      if (scanMode.at < st.N) {
+        scanMode.at = Math.min(st.N, scanMode.at + Math.max(4, Math.round(st.N / 80)));
+        drawScan(); syncDeck();
+      }
+      return;
+    }
+    if (!playing || done()) return;
+    acc += dt;
+    var guard = 0;
+    while (!done() && acc >= dur(run.trace[step]) && guard < 400) {
+      acc -= dur(run.trace[step]); reveal = run.trace[step].mark; step++; guard++;
+    }
+    if (done()) { reveal = run.checked; playing = false; $('btnPlay').textContent = 'Replay'; }
+    renderAll(); syncDeck();
+  }
+  function drawScan() {
+    var gc = $('gChecked'); clear(gc);
+    var frag = [];
+    for (var i = 0; i < scanMode.at && i < st.N; i++) {
+      var p = pt(i, 0);
+      frag.push(circleSub(p.x, p.y, st.N > 900 ? 1.9 : 2.3));
+    }
+    gc.appendChild(el('path', { d: frag.join(''), fill: C.foil, 'fill-opacity': '0.9' }));
+    clear($('gTrail')); clear($('gMarks')); clear($('gNotes'));
+    drawHud();
+  }
+  function setFromExp(i) {
+    var e = EXPS[i];
+    st.N = e.N; st.M = e.M; st.ef = e.ef; st.qx = e.qx; st.qy = e.qy;
+    activeExp = i;
+    $('cN').value = e.N; $('cEf').value = e.ef; $('cM').value = e.M;
+    rebuild(true);
+  }
+  var pending = 0;
+  function afterSlide(needsBuild) {
+    activeExp = -1;
+    $('vN').textContent = fmt(st.N); $('vEf').textContent = st.ef; $('vM').textContent = st.M;
+    if (needsBuild) { clearTimeout(pending); pending = setTimeout(function () { rebuild(false); }, 80); }
+    else doRun(false);
+  }
+  $('cN').addEventListener('input', function () { st.N = +this.value; afterSlide(true); });
+  $('cM').addEventListener('input', function () { st.M = +this.value; afterSlide(true); });
+  $('cEf').addEventListener('input', function () { st.ef = +this.value; afterSlide(false); });
+  var expBtns = document.querySelectorAll('.exp');
+  for (var bi = 0; bi < expBtns.length; bi++) {
+    (function (b) { b.addEventListener('click', function () { setFromExp(Number(b.getAttribute('data-exp'))); }); })(expBtns[bi]);
+  }
+  $('btnRun').addEventListener('click', function () { doRun(true); });
+  $('btnReset').addEventListener('click', function () {
+    st.N = DEF.N; st.M = DEF.M; st.ef = DEF.ef; st.qx = DEF.qx; st.qy = DEF.qy;
+    activeExp = -1;
+    $('cN').value = DEF.N; $('cEf').value = DEF.ef; $('cM').value = DEF.M;
+    rebuild(true);
+  });
+  $('btnPlay').addEventListener('click', function () {
+    if (scanMode) return;
+    if (done()) { doRun(true); return; }
+    playing = !playing; this.textContent = playing ? 'Pause' : 'Play';
+  });
+  $('btnScan').addEventListener('click', function () {
+    activeExp = -1; playing = false; scanMode = { at: 0 };
+    clear($('gTrail')); clear($('gMarks')); clear($('gNotes'));
+    $('btnPlay').disabled = true; drawScan(); syncDeck();
+  });
+  var stage = $('stage'), dragging = false;
+  function svgPoint(evt) {
+    var r = stage.getBoundingClientRect(), vb = stage.viewBox.baseVal;
+    return { x: (evt.clientX - r.left) / r.width * vb.width, y: (evt.clientY - r.top) / r.height * vb.height };
+  }
+  function moveQuery(p) {
+    var uv = unproj(p.x, p.y);
+    st.qx = uv.u; st.qy = uv.v; activeExp = -1; doRun(false);
+  }
+  stage.addEventListener('pointerdown', function (e) {
+    if (scanMode) return;
+    var p = svgPoint(e), q = proj(st.qx, st.qy, 0);
+    var near = Math.abs(p.x - q.x) < 24 && Math.abs(p.y - q.y) < 24;
+    var uv = unproj(p.x, p.y);
+    var inside = uv.raw.u > 0 && uv.raw.u < 1 && uv.raw.v > 0 && uv.raw.v < 1;
+    if (!near && !inside) return;
+    dragging = true; try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+    moveQuery(p);
+  });
+  stage.addEventListener('pointermove', function (e) { if (dragging) moveQuery(svgPoint(e)); });
+  stage.addEventListener('pointerup', function (e) { dragging = false; try { stage.releasePointerCapture(e.pointerId); } catch (err) {} });
+  stage.addEventListener('pointercancel', function () { dragging = false; });
+  stage.addEventListener('keydown', function (e) {
+    var h = document.getElementById('queryHandle');
+    if (!h || document.activeElement !== h) return;
+    var s = e.shiftKey ? 0.004 : 0.02, moved = false;
+    if (e.key === 'ArrowLeft') { st.qx = Math.max(0, st.qx - s); moved = true; }
+    else if (e.key === 'ArrowRight') { st.qx = Math.min(1, st.qx + s); moved = true; }
+    else if (e.key === 'ArrowUp') { st.qy = Math.min(1, st.qy + s); moved = true; }
+    else if (e.key === 'ArrowDown') { st.qy = Math.max(0, st.qy - s); moved = true; }
+    if (!moved) return;
+    e.preventDefault(); activeExp = -1; doRun(false);
+    var nh = document.getElementById('queryHandle');
+    if (nh) nh.focus();
+  });
+  rebuild(true);
+  requestAnimationFrame(tick);
+}
+
+var redraws = [];
+initHero(); initFig1(); initFig2(); initFig3(); initFig4(); initFig5(); initPlayground();
+var rt = 0;
+window.addEventListener('resize', function () {
+  clearTimeout(rt);
+  rt = setTimeout(function () { for (var i = 0; i < redraws.length; i++) { try { redraws[i](); } catch (e) {} } }, 140);
+});
+})();
+
+</script>
+<!--CHROME:FOOTER-->
+</body>
+</html>
