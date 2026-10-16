@@ -5,8 +5,9 @@
 //   1. Reads the shared partials (head / header / footer / subscribe).
 //   2. Scans src/visuals/* and pulls each page's metadata from its own <head>
 //      and masthead (og:title, meta description, Published/Updated <time>).
-//   3. Regenerates the homepage list, the /visuals list, and the sitemap from
-//      that metadata (newest first).
+//   3. Regenerates the /visuals list and the sitemap from that metadata (newest
+//      first). Any page whose head carries noindex stays out of the sitemap. The
+//      list markers are optional, so a page without them builds unchanged.
 //   4. Injects the chrome + subscribe partials into every page at their markers.
 //   5. Writes the deployable site to dist/  (Cloudflare Pages serves this).
 //
@@ -24,12 +25,17 @@ const ASSETS    = join(ROOT, 'assets');
 const DIST      = join(ROOT, 'dist');
 
 const SITE        = 'https://jishan.ca';
-const HOME_LATEST = 6; // how many pieces the homepage shows
+const HOME_LATEST = 6; // how many pieces a list on the homepage would show
+// The homepage no longer takes its date from the newest piece, so its lastmod is
+// set by hand. Bump it when the homepage copy changes.
+const HOME_LASTMOD = '2026-10-15';
 
 const read = (p) => readFileSync(p, 'utf8');
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const pick = (html, re) => { const m = html.match(re); return m ? m[1].trim() : ''; };
+// A page that asks search engines not to index it stays out of the sitemap.
+const isNoindex = (html) => /<meta\s+name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html);
 const esc  = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function fmtDate(iso){
   if(!iso) return '';
@@ -89,18 +95,22 @@ rmSync(DIST, { recursive: true, force: true });
 mkdirSync(DIST, { recursive: true });
 
 // ---- homepage ----
-writeOut('index.html', injectAll(read(join(TEMPLATES, 'home.html')), {
+// The list markers are optional. injectAll is a no-op for a marker the page omits,
+// so the homepage builds cleanly with or without a Latest list.
+const homeHTML = injectAll(read(join(TEMPLATES, 'home.html')), {
   ...partials,
   '<!--VISUALS_LIST-->' : listHTML(pieces.slice(0, HOME_LATEST)),
   '<!--VISUALS_COUNT-->': countLabel(pieces.length),
-}));
+});
+writeOut('index.html', homeHTML);
 
 // ---- /visuals index ----
-writeOut('visuals/index.html', injectAll(read(join(TEMPLATES, 'visuals-index.html')), {
+const visualsIndexHTML = injectAll(read(join(TEMPLATES, 'visuals-index.html')), {
   ...partials,
   '<!--VISUALS_LIST-->' : listHTML(pieces),
   '<!--VISUALS_COUNT-->': countLabel(pieces.length),
-}));
+});
+writeOut('visuals/index.html', visualsIndexHTML);
 
 // ---- 404 ----
 if(existsSync(join(TEMPLATES, '404.html'))){
@@ -125,12 +135,13 @@ for(const f of ['favicon.ico', 'apple-touch-icon.png', 'webpushr-sw.js']){
 }
 
 // ---- sitemap.xml ----
-const newest = pieces[0]?.updated || new Date().toISOString().slice(0, 10);
+// Every page the build writes is a sitemap candidate. Anything carrying noindex in
+// its head drops out, so hiding a page is one meta tag rather than a rule here.
 const urls = [
-  { loc: `${SITE}/`, lastmod: newest },
-  { loc: `${SITE}/visuals/`, lastmod: newest },
-  ...pieces.map(p => ({ loc: p.url, lastmod: p.updated || p.published })),
-];
+  { loc: `${SITE}/`,          lastmod: HOME_LASTMOD,                html: homeHTML },
+  { loc: `${SITE}/visuals/`,  lastmod: pieces[0]?.updated || HOME_LASTMOD, html: visualsIndexHTML },
+  ...pieces.map(p => ({ loc: p.url, lastmod: p.updated || p.published, html: p.html })),
+].filter(u => !isNoindex(u.html));
 writeOut('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(u => `  <url><loc>${u.loc}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}</url>`).join('\n')}
@@ -141,4 +152,5 @@ ${urls.map(u => `  <url><loc>${u.loc}</loc>${u.lastmod ? `<lastmod>${u.lastmod}<
 writeOut('robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
 
 console.log(`Built ${pieces.length} visual${pieces.length === 1 ? '' : 's'} -> dist/`);
-pieces.forEach(p => console.log(`  • ${p.slug}  (${p.published || 'no date'})`));
+pieces.forEach(p => console.log(`  • ${p.slug}  (${p.published || 'no date'})${isNoindex(p.html) ? '  [noindex]' : ''}`));
+console.log(`Sitemap lists ${urls.length} URL${urls.length === 1 ? '' : 's'}.`);
